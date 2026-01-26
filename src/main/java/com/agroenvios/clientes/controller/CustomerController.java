@@ -1,7 +1,7 @@
-package com.agro.clientes.controller;
+package com.agroenvios.clientes.controller;
 
-import com.agro.clientes.model.Customer;
-import com.agro.clientes.service.CustomerService;
+import com.agroenvios.clientes.model.Customer;
+import com.agroenvios.clientes.service.CustomerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

@@ -1,6 +1,6 @@
-package com.agro.clientes.repository;
+package com.agroenvios.clientes.repository;
 
-import com.agro.clientes.model.CartItem;
+import com.agroenvios.clientes.model.CartItem;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

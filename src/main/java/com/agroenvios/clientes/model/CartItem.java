@@ -1,4 +1,4 @@
-package com.agro.clientes.model;
+package com.agroenvios.clientes.model;
 
 import jakarta.persistence.*;
 import lombok.*;

@@ -1,10 +1,10 @@
-package com.agro.clientes.service;
+package com.agroenvios.clientes.service;
 
-import com.agro.clientes.model.Cart;
-import com.agro.clientes.model.CartItem;
-import com.agro.clientes.model.Customer;
-import com.agro.clientes.repository.CartRepository;
-import com.agro.clientes.repository.CartItemRepository;
+import com.agroenvios.clientes.model.Cart;
+import com.agroenvios.clientes.model.CartItem;
+import com.agroenvios.clientes.model.Customer;
+import com.agroenvios.clientes.repository.CartRepository;
+import com.agroenvios.clientes.repository.CartItemRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

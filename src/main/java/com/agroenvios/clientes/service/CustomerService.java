@@ -1,7 +1,7 @@
-package com.agro.clientes.service;
+package com.agroenvios.clientes.service;
 
-import com.agro.clientes.model.Customer;
-import com.agro.clientes.repository.CustomerRepository;
+import com.agroenvios.clientes.model.Customer;
+import com.agroenvios.clientes.repository.CustomerRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;

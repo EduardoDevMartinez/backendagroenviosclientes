@@ -1,9 +1,13 @@
-package com.agro.clientes.service;
+package com.agroenvios.clientes.service;
 
-import com.agro.clientes.model.*;
-import com.agro.clientes.repository.CartItemRepository;
-import com.agro.clientes.repository.OrderRepository;
-import com.agro.clientes.repository.OrderItemRepository;
+import com.agroenvios.clientes.model.*;
+import com.agroenvios.clientes.model.CartItem;
+import com.agroenvios.clientes.model.Customer;
+import com.agroenvios.clientes.model.Order;
+import com.agroenvios.clientes.model.OrderItem;
+import com.agroenvios.clientes.repository.CartItemRepository;
+import com.agroenvios.clientes.repository.OrderRepository;
+import com.agroenvios.clientes.repository.OrderItemRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,8 +25,8 @@ public class OrderService {
     private final CartService cartService;
 
     @Transactional
-    public Order createOrderFromCart(Long customerId, Long cartId, String deliveryAddress, 
-                                    String deliveryCity, String deliveryState, Integer deliveryPostalCode) {
+    public Order createOrderFromCart(Long customerId, Long cartId, String deliveryAddress,
+                                     String deliveryCity, String deliveryState, Integer deliveryPostalCode) {
         Customer customer = customerService.getCustomerById(customerId);
         List<CartItem> cartItems = cartItemRepository.findByCartId(cartId);
 

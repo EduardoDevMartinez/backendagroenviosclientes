@@ -1,8 +1,7 @@
-package com.agro.clientes.model;
+package com.agroenvios.clientes.model;
 
 import jakarta.persistence.*;
 import lombok.*;
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -10,27 +9,33 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "order_items")
-public class OrderItem {
+@Table(name = "customers")
+public class Customer {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "order_id", nullable = false)
-    private Order order;
-
-    private Long productId;
-    private String productName;
-    private Long tradeShopId;
+    @Column(unique = true, nullable = false)
+    private String email;
 
     @Column(nullable = false)
-    private Integer quantity;
+    private String password;
+
+    private String nombre;
+    private String paterno;
+    private String materno;
+    private String telefono;
+    private String direccion;
+    private String ciudad;
+    private String estado;
+    private Integer codigoPostal;
+    private String colonia;
+
+    @Column(name = "image_key")
+    private String imageKey;
 
     @Column(nullable = false)
-    private BigDecimal unitPrice;
-
-    private BigDecimal subtotal;
+    private Boolean emailVerified = false;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
