@@ -66,7 +66,7 @@ public class JwtService {
 
     public String generateValidateUsernameToken(String username) {
 
-        long expirationTimeMillis = System.currentTimeMillis() + 1000L * 60 * 15;
+        long expirationTimeMillis = System.currentTimeMillis() + 1000L * 60 * 60 * 24; // 24 horas
         Date expirationDate = new Date(expirationTimeMillis);
 
         Map<String, Object> claims = new HashMap<>();

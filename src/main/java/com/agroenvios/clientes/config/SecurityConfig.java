@@ -33,7 +33,7 @@ public class SecurityConfig {
         return http.csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(authRequest -> authRequest
-                        .requestMatchers("/", "/auth/**", "/categories/getAll",  "/contratos/getByTipoAndNumero/{tipo}/{numero}", "/ws/**", "/notifications/create-test").permitAll()
+                        .requestMatchers( "/auth/**", "/email/verify").permitAll()
                         .anyRequest().authenticated())
                 .sessionManagement(sessionManager -> sessionManager.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authProvider)

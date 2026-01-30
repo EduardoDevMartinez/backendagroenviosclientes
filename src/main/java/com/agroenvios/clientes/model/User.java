@@ -30,10 +30,23 @@ public class User implements UserDetails{
     private String password;
 
     @Column(nullable = false)
+    private String nombre;
+
+    @Column(nullable = false)
+    private String paterno;
+
+    @Column(nullable = false)
+    private String materno;
+
+    @Column(nullable = false)
     private String correo;
 
     @Column(nullable = false)
     private String telefono;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isActive = false;
 
 
     @Override
@@ -43,22 +56,22 @@ public class User implements UserDetails{
 
     @Override
     public boolean isAccountNonExpired() {
-        return UserDetails.super.isAccountNonExpired();
+        return Boolean.TRUE.equals(isActive);
     }
 
     @Override
     public boolean isAccountNonLocked() {
-        return UserDetails.super.isAccountNonLocked();
+        return Boolean.TRUE.equals(isActive);
     }
 
     @Override
     public boolean isCredentialsNonExpired() {
-        return UserDetails.super.isCredentialsNonExpired();
+        return Boolean.TRUE.equals(isActive);
     }
 
     @Override
     public boolean isEnabled() {
-        return UserDetails.super.isEnabled();
+        return Boolean.TRUE.equals(isActive);
     }
 
 
