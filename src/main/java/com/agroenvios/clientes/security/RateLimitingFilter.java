@@ -24,7 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class RateLimitingFilter extends OncePerRequestFilter {
 
     private final ObjectMapper objectMapper;
-    private final ConcurrentHashMap<String, long[]> rateLimitMap = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, long[]> loginRateLimitMap = new ConcurrentHashMap<>();
 
     @Value("${rate.limit.max-attempts:5}")
     private int maxAttempts;
@@ -44,7 +44,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         String ip = getClientIp(request);
 
         // compute() es atómico por key: actualiza o resetea la ventana según corresponda
-        long[] attempts = rateLimitMap.compute(ip, (key, existing) -> {
+        long[] attempts = loginRateLimitMap.compute(ip, (key, existing) -> {
             long now = System.currentTimeMillis();
             if (existing == null || now - existing[0] > windowMs) {
                 return new long[]{now, 1};
@@ -57,7 +57,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
             long remainingMs = windowMs - (System.currentTimeMillis() - attempts[0]);
             long remainingSeconds = Math.max(0, remainingMs / 1000);
 
-            log.warn("Rate limit excedido para IP: {}", ip);
+            log.warn("Rate limit de login excedido para IP: {}", ip);
 
             response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);

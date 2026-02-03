@@ -6,10 +6,13 @@ import com.agroenvios.clientes.repository.InvalidTokenRepository;
 import com.agroenvios.clientes.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -23,9 +26,35 @@ public class PasswordResetService {
     private final InvalidTokenRepository invalidTokenRepository;
     private final LogsService logsService;
 
+    @Value("${rate.limit.email.max-attempts:3}")
+    private int emailMaxAttempts;
+
+    @Value("${rate.limit.email.window-ms:3600000}")
+    private long emailWindowMs;
+
+    private final ConcurrentHashMap<String, long[]> emailRateLimitMap = new ConcurrentHashMap<>();
+
     private static final String SUCCESS_MESSAGE = "Si el correo está registrado, recibirá un enlace para recuperar su contraseña";
 
     public ResponseEntity<String> requestPasswordReset(String correo) {
+        long[] attempts = emailRateLimitMap.compute(correo, (key, existing) -> {
+            long now = System.currentTimeMillis();
+            if (existing == null || now - existing[0] > emailWindowMs) {
+                return new long[]{now, 1};
+            }
+            existing[1]++;
+            return existing;
+        });
+
+        if (attempts[1] > emailMaxAttempts) {
+            long remainingMs = emailWindowMs - (System.currentTimeMillis() - attempts[0]);
+            long remainingSeconds = Math.max(0, remainingMs / 1000);
+            log.warn("Rate limit de correo excedido para: {}", correo);
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .header("Retry-After", String.valueOf(remainingSeconds))
+                    .body("Demasiadas solicitudes. Intente de nuevo en " + remainingSeconds + " segundos");
+        }
+
         userRepository.findByCorreo(correo).ifPresent(user -> {
             String token = jwtService.generatePasswordResetToken(user.getUsername());
             emailService.sendPasswordResetEmail(user.getCorreo(), user.getNombre(), token);

@@ -26,6 +26,15 @@ public class JwtService {
     private String key;
     private Key SECRET_KEY;
 
+    @Value("${jwt.expiration.auth-ms}")
+    private long authExpirationMs;
+
+    @Value("${jwt.expiration.email-validation-ms}")
+    private long emailValidationExpirationMs;
+
+    @Value("${jwt.expiration.password-reset-ms}")
+    private long passwordResetExpirationMs;
+
     private final InvalidTokenRepository invalidTokenRepository;
 
     @PostConstruct
@@ -39,7 +48,7 @@ public class JwtService {
 
     private String generateToken(Map<String, Object> extraClaims, UserDetails user) {
 
-        long expirationTimeMillis = System.currentTimeMillis() + (1000L * 60 * 60 * 8);
+        long expirationTimeMillis = System.currentTimeMillis() + authExpirationMs;
         Date expirationDate = new Date(expirationTimeMillis);
 
         return Jwts.builder()
@@ -66,7 +75,7 @@ public class JwtService {
 
     public String generateValidateUsernameToken(String username) {
 
-        long expirationTimeMillis = System.currentTimeMillis() + 1000L * 60 * 60 * 24; // 24 horas
+        long expirationTimeMillis = System.currentTimeMillis() + emailValidationExpirationMs;
         Date expirationDate = new Date(expirationTimeMillis);
 
         Map<String, Object> claims = new HashMap<>();
@@ -125,7 +134,7 @@ public class JwtService {
         Map<String, Object> claims = new HashMap<>();
         claims.put("purpose", "PASSWORD_RESET");
 
-        long expirationTimeMillis = System.currentTimeMillis() + (1000L * 60 * 15);
+        long expirationTimeMillis = System.currentTimeMillis() + passwordResetExpirationMs;
         Date expirationDate = new Date(expirationTimeMillis);
 
         return Jwts.builder()
