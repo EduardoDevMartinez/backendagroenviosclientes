@@ -80,7 +80,7 @@ public class EmailService {
     private String buildPasswordResetEmailContent(String nombre, String token) {
         Context context = new Context();
         context.setVariable("nombre", nombre);
-        context.setVariable("resetLink", baseUrl + "/reset-password?token=" + token);
+        context.setVariable("resetLink", baseUrl + "/reset-password-client?token=" + token);
 
         return templateEngine.process("email/password-reset", context);
     }
