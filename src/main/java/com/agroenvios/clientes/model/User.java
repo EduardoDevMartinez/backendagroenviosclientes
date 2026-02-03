@@ -46,6 +46,10 @@ public class User implements UserDetails{
 
     @Column(nullable = false)
     @Builder.Default
+    private Boolean isEmailVerified= false;
+
+    @Column(nullable = false)
+    @Builder.Default
     private Boolean isActive = false;
 
 

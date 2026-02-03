@@ -1,6 +1,7 @@
 package com.agroenvios.clientes.config;
 
 import com.agroenvios.clientes.security.JwtAuthenticationFilter;
+import com.agroenvios.clientes.security.RateLimitingFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,6 +27,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final RateLimitingFilter rateLimitingFilter;
     private final AuthenticationProvider authProvider;
 
     @Bean
@@ -38,6 +40,7 @@ public class SecurityConfig {
                 .sessionManagement(sessionManager -> sessionManager.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authProvider)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(rateLimitingFilter, JwtAuthenticationFilter.class)
                 .build();
     }
 

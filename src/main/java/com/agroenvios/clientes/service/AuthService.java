@@ -1,6 +1,8 @@
 package com.agroenvios.clientes.service;
 
+import com.agroenvios.clientes.dto.auth.RequestLogin;
 import com.agroenvios.clientes.dto.auth.RequestRegister;
+import com.agroenvios.clientes.dto.auth.ResponseLogin;
 import com.agroenvios.clientes.events.UserRegisteredEvent;
 import com.agroenvios.clientes.model.User;
 import com.agroenvios.clientes.repository.UserRepository;
@@ -9,6 +11,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +26,42 @@ public class AuthService {
     private final LogsService logsService;
     private final ApplicationEventPublisher eventPublisher;
     private final PasswordEncoder passwordEncoder;
+    private final AuthenticationManager authenticationManager;
+    private final JwtService jwtService;
+
+    public ResponseEntity<ResponseLogin> login(RequestLogin request) {
+
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+        );
+
+        User user = userRepository.findByUsername(request.getUsername())
+                .orElseThrow(() -> new BadCredentialsException("Credenciales inválidas"));
+
+        if (!user.getIsEmailVerified()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ResponseLogin.builder()
+                            .message("Por favor, verifique su correo electrónico antes de iniciar sesión")
+                            .build());
+        }
+
+        String token = jwtService.getToken(user);
+
+        logsService.saveLog(
+                "auth",
+                "login",
+                "Inicio de sesión exitoso ",
+                request.getUsername()
+        );
+
+
+        return ResponseEntity.ok(ResponseLogin.builder()
+                .token(token)
+                .message("Inicio de sesión exitoso")
+                .build());
+
+
+    }
 
     public ResponseEntity<String> registerUser(RequestRegister request) {
 
@@ -58,7 +99,7 @@ public class AuthService {
                 "auth",
                 "register",
                 "Nuevo registro de usuario - Username: " + request.getUsername() +
-                        "Nombre: " + request.getNombre() + " " + request.getPaterno() + " " + request.getMaterno() +
+                        ", Nombre: " + request.getNombre() + " " + request.getPaterno() + " " + request.getMaterno() +
                         ", Correo: " + request.getCorreo() +
                         ", Teléfono: " + request.getTelefono() ,
                 request.getUsername()

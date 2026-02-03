@@ -42,6 +42,7 @@ public class EmailVerificationService {
                     .body("La cuenta ya está verificada");
         }
 
+        user.setIsEmailVerified(true);
         user.setIsActive(true);
         userRepository.save(user);
 

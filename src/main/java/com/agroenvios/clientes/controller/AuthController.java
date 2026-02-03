@@ -1,6 +1,8 @@
 package com.agroenvios.clientes.controller;
 
+import com.agroenvios.clientes.dto.auth.RequestLogin;
 import com.agroenvios.clientes.dto.auth.RequestRegister;
+import com.agroenvios.clientes.dto.auth.ResponseLogin;
 import com.agroenvios.clientes.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +19,12 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<String> registerUser(@Valid @RequestBody RequestRegister request) {
         return authService.registerUser(request);
+    }
+
+
+    @PostMapping("/login")
+    public ResponseEntity<ResponseLogin> login(@Valid @RequestBody RequestLogin request) {
+        return authService.login(request);
     }
 
 

@@ -93,6 +93,8 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-mail</artifactId>
+			<version>4.0.2</version>
+			<scope>compile</scope>
 		</dependency>
 
 		<!-- Thymeleaf -->
@@ -111,13 +113,12 @@
 		<dependency>
 			<groupId>org.springframework.security</groupId>
 			<artifactId>spring-security-test</artifactId>
+			<version>7.0.2</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
 
 	<build>
-
-		<!-- ✅ Nombre del archivo generado -->
 		<finalName>agroenvios-clientes</finalName>
 
 		<plugins>
