@@ -55,4 +55,33 @@ public class EmailService {
 
         return templateEngine.process("email/verification", context);
     }
+
+    @Async
+    public void sendPasswordResetEmail(String toEmail, String nombre, String token) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("Recuperación de contraseña - AgroEnvíos");
+            helper.setText(buildPasswordResetEmailContent(nombre, token), true);
+
+            ClassPathResource logo = new ClassPathResource("static/images/logo.png");
+            helper.addInline("logo", logo);
+
+            mailSender.send(message);
+            log.info("Correo de recuperación enviado a: {}", toEmail);
+        } catch (MessagingException e) {
+            log.error("Error al enviar correo de recuperación a {}: {}", toEmail, e.getMessage());
+        }
+    }
+
+    private String buildPasswordResetEmailContent(String nombre, String token) {
+        Context context = new Context();
+        context.setVariable("nombre", nombre);
+        context.setVariable("resetLink", baseUrl + "/reset-password?token=" + token);
+
+        return templateEngine.process("email/password-reset", context);
+    }
 }
