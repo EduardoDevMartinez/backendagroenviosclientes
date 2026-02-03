@@ -36,6 +36,15 @@ public class PasswordResetService {
         return ResponseEntity.ok(SUCCESS_MESSAGE);
     }
 
+    public ResponseEntity<String> validateResetToken(String token) {
+        if (!jwtService.isPasswordResetToken(token) || invalidTokenRepository.existsByToken(token)) {
+            log.warn("Intento de validar token inválido, expirado o ya usado");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("El enlace es inválido o ha expirado");
+        }
+        return ResponseEntity.ok("Token válido");
+    }
+
     public ResponseEntity<String> resetPassword(String token, String newPassword) {
         if (!jwtService.isPasswordResetToken(token) || invalidTokenRepository.existsByToken(token)) {
             log.warn("Intento de reset con token inválido, expirado o ya usado");

@@ -32,6 +32,12 @@ public class AuthController {
         return passwordResetService.requestPasswordReset(request.getCorreo());
     }
 
+    @GetMapping("/password-reset/validate")
+    public ResponseEntity<String> validateResetToken(@RequestParam String token) {
+        return passwordResetService
+                .validateResetToken(token);
+    }
+
     @PostMapping("/password-reset")
     public ResponseEntity<String> resetPassword(@Valid @RequestBody RequestNewPassword request) {
         return passwordResetService.resetPassword(request.getToken(), request.getPassword());
