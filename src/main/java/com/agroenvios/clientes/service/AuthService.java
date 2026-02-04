@@ -147,7 +147,11 @@ public class AuthService {
         try {
             String username = jwtService.getUsernameFromToken(token);
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-            return ResponseEntity.ok(jwtService.isTokenValid(token, userDetails));
+            boolean valid = jwtService.isTokenValid(token, userDetails);
+            if (valid) {
+                logsService.saveLog("auth", "validate_session", "Sesión validada exitosamente", username);
+            }
+            return ResponseEntity.ok(valid);
         } catch (Exception e) {
             log.warn("Validación de sesión fallida: {}", e.getMessage());
             return ResponseEntity.ok(false);

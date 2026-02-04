@@ -16,15 +16,19 @@ import java.util.List;
 public class DireccionEntregaService {
 
     private final DireccionEntregaRepository direccionRepository;
+    private final LogsService logsService;
 
-    public List<DireccionEntrega> getDirecciones(Long userId) {
-        return direccionRepository.findByUserId(userId);
+    public List<DireccionEntrega> getDirecciones(User user) {
+        logsService.saveLog("direcciones", "get_all", "Direcciones consultadas", user.getUsername());
+        return direccionRepository.findByUserId(user.getId());
     }
 
-    public DireccionEntrega getDireccionById(Long direccionId, Long userId) {
-        return direccionRepository.findById(direccionId)
-                .filter(d -> d.getUser().getId().equals(userId))
+    public DireccionEntrega getDireccionById(Long direccionId, User user) {
+        DireccionEntrega direccion = direccionRepository.findById(direccionId)
+                .filter(d -> d.getUser().getId().equals(user.getId()))
                 .orElseThrow(() -> new RuntimeException("Dirección no encontrada"));
+        logsService.saveLog("direcciones", "get_one", "Dirección consultada - ID: " + direccionId, user.getUsername());
+        return direccion;
     }
 
     @Transactional
@@ -35,12 +39,14 @@ public class DireccionEntregaService {
             existentes.forEach(d -> d.setEsPrincipal(false));
             direccionRepository.saveAll(existentes);
         }
-        return direccionRepository.save(direccion);
+        DireccionEntrega creada = direccionRepository.save(direccion);
+        logsService.saveLog("direcciones", "crear", "Dirección creada - ID: " + creada.getId(), user.getUsername());
+        return creada;
     }
 
     @Transactional
-    public DireccionEntrega actualizar(Long direccionId, DireccionEntrega datos, Long userId) {
-        DireccionEntrega direccion = getDireccionById(direccionId, userId);
+    public DireccionEntrega actualizar(Long direccionId, DireccionEntrega datos, User user) {
+        DireccionEntrega direccion = getDireccionById(direccionId, user);
 
         if (datos.getNombre() != null) direccion.setNombre(datos.getNombre());
         if (datos.getCalle() != null) direccion.setCalle(datos.getCalle());
@@ -50,17 +56,19 @@ public class DireccionEntregaService {
         if (datos.getColonia() != null) direccion.setColonia(datos.getColonia());
 
         if (datos.getEsPrincipal() != null && datos.getEsPrincipal()) {
-            List<DireccionEntrega> existentes = direccionRepository.findByUserId(userId);
+            List<DireccionEntrega> existentes = direccionRepository.findByUserId(user.getId());
             existentes.forEach(d -> d.setEsPrincipal(false));
             direccionRepository.saveAll(existentes);
             direccion.setEsPrincipal(true);
         }
 
+        logsService.saveLog("direcciones", "actualizar", "Dirección actualizada - ID: " + direccionId, user.getUsername());
         return direccionRepository.save(direccion);
     }
 
-    public void eliminar(Long direccionId, Long userId) {
-        DireccionEntrega direccion = getDireccionById(direccionId, userId);
+    public void eliminar(Long direccionId, User user) {
+        DireccionEntrega direccion = getDireccionById(direccionId, user);
         direccionRepository.delete(direccion);
+        logsService.saveLog("direcciones", "eliminar", "Dirección eliminada - ID: " + direccionId, user.getUsername());
     }
 }

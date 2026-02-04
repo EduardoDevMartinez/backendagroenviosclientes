@@ -23,12 +23,12 @@ public class MetodoPagoController {
 
     @GetMapping
     public ResponseEntity<List<MetodoPago>> getMetodosPago() {
-        return ResponseEntity.ok(metodoPagoService.getMetodosPago(getCurrentUser().getId()));
+        return ResponseEntity.ok(metodoPagoService.getMetodosPago(getCurrentUser()));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<MetodoPago> getMetodoPago(@PathVariable Long id) {
-        return ResponseEntity.ok(metodoPagoService.getMetodoPagoById(id, getCurrentUser().getId()));
+        return ResponseEntity.ok(metodoPagoService.getMetodoPagoById(id, getCurrentUser()));
     }
 
     @PostMapping
@@ -38,12 +38,12 @@ public class MetodoPagoController {
 
     @PutMapping("/{id}")
     public ResponseEntity<MetodoPago> actualizar(@PathVariable Long id, @RequestBody MetodoPago datos) {
-        return ResponseEntity.ok(metodoPagoService.actualizar(id, datos, getCurrentUser().getId()));
+        return ResponseEntity.ok(metodoPagoService.actualizar(id, datos, getCurrentUser()));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
-        metodoPagoService.eliminar(id, getCurrentUser().getId());
+        metodoPagoService.eliminar(id, getCurrentUser());
         return ResponseEntity.noContent().build();
     }
 }

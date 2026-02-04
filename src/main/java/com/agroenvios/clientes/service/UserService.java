@@ -16,6 +16,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final PhoneVerificationService phoneVerificationService;
     private final MinioService minioService;
+    private final LogsService logsService;
 
     private User getCurrentUserEntity() {
         return (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -38,7 +39,9 @@ public class UserService {
     }
 
     public ResponseUser getCurrentUser() {
-        return toResponse(getCurrentUserEntity());
+        User user = getCurrentUserEntity();
+        logsService.saveLog("user", "get_me", "Datos del usuario consultados", user.getUsername());
+        return toResponse(user);
     }
 
     public ResponseUser updateUser(String nombre, String paterno, String materno, String telefono, MultipartFile file) {
@@ -53,7 +56,9 @@ public class UserService {
             user.setFoto(url);
         }
 
-        return toResponse(userRepository.save(user));
+        ResponseUser response = toResponse(userRepository.save(user));
+        logsService.saveLog("user", "update", "Datos del usuario actualizados", user.getUsername());
+        return response;
     }
 
     public ResponseEntity<String> requestPhoneCode() {

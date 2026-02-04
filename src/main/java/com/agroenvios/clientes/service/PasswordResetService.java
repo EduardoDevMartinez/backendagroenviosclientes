@@ -58,6 +58,7 @@ public class PasswordResetService {
         userRepository.findByCorreo(correo).ifPresent(user -> {
             String token = jwtService.generatePasswordResetToken(user.getUsername());
             emailService.sendPasswordResetEmail(user.getCorreo(), user.getNombre(), token);
+            logsService.saveLog("auth", "password_reset_request", "Correo de recuperación enviado", user.getUsername());
             log.info("Token de recuperación generado para: {}", user.getUsername());
         });
 
@@ -76,6 +77,8 @@ public class PasswordResetService {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body("El enlace es inválido o ha expirado");
         }
+        String username = jwtService.getUsernameFromToken(token);
+        logsService.saveLog("auth", "password_reset_validate", "Token de recuperación validado", username);
         return ResponseEntity.ok("Token válido");
     }
 

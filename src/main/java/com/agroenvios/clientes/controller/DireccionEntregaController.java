@@ -23,12 +23,12 @@ public class DireccionEntregaController {
 
     @GetMapping
     public ResponseEntity<List<DireccionEntrega>> getDirecciones() {
-        return ResponseEntity.ok(direccionService.getDirecciones(getCurrentUser().getId()));
+        return ResponseEntity.ok(direccionService.getDirecciones(getCurrentUser()));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<DireccionEntrega> getDireccion(@PathVariable Long id) {
-        return ResponseEntity.ok(direccionService.getDireccionById(id, getCurrentUser().getId()));
+        return ResponseEntity.ok(direccionService.getDireccionById(id, getCurrentUser()));
     }
 
     @PostMapping
@@ -38,12 +38,12 @@ public class DireccionEntregaController {
 
     @PutMapping("/{id}")
     public ResponseEntity<DireccionEntrega> actualizar(@PathVariable Long id, @RequestBody DireccionEntrega datos) {
-        return ResponseEntity.ok(direccionService.actualizar(id, datos, getCurrentUser().getId()));
+        return ResponseEntity.ok(direccionService.actualizar(id, datos, getCurrentUser()));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
-        direccionService.eliminar(id, getCurrentUser().getId());
+        direccionService.eliminar(id, getCurrentUser());
         return ResponseEntity.noContent().build();
     }
 }

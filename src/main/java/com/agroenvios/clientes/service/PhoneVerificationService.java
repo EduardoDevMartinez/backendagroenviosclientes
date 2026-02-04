@@ -36,6 +36,7 @@ public class PhoneVerificationService {
         otpStore.put(user.getUsername(), new long[]{Long.parseLong(otp), expiration});
 
         // TODO: enviar OTP por SMS al número user.getTelefono()
+        logsService.saveLog("auth", "phone_request_code", "OTP solicitado para verificación de teléfono", user.getUsername());
         log.info("OTP generado para {}: {}", user.getUsername(), otp);
 
         return ResponseEntity.ok("Código enviado al número de teléfono registrado");
