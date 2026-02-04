@@ -30,6 +30,7 @@ public class MinioService {
     ) {
         this.endpoint = endpoint;
         this.bucket = bucket;
+        log.info("MinioService inicializado con endpoint: {} bucket: {}", endpoint, bucket);
         this.s3Client = S3Client.builder()
                 .endpointOverride(URI.create(endpoint))
                 .region(Region.of(region))
@@ -38,6 +39,7 @@ public class MinioService {
                                 AwsBasicCredentials.create(accessKey, secretKey)
                         )
                 )
+                .forcePathStyle(true)
                 .build();
     }
 
