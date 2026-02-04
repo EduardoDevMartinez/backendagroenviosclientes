@@ -2,6 +2,7 @@ package com.agroenvios.clientes.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.time.LocalDateTime;
 
 @Data
@@ -9,33 +10,37 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "customers")
-public class Customer {
+@Table(name = "direcciones_entrega")
+public class DireccionEntrega {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false)
-    private String email;
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Column(nullable = false)
-    private String password;
-
     private String nombre;
-    private String paterno;
-    private String materno;
-    private String telefono;
-    private String direccion;
+
+    @Column(nullable = false)
+    private String calle;
+
+    @Column(nullable = false)
     private String ciudad;
+
+    @Column(nullable = false)
     private String estado;
+
+    @Column(nullable = false)
     private Integer codigoPostal;
+
     private String colonia;
 
-    @Column(name = "image_key")
-    private String imageKey;
-
     @Column(nullable = false)
-    private Boolean emailVerified = false;
+    @Builder.Default
+    private Boolean esPrincipal = false;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;

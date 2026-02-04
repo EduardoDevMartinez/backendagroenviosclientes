@@ -3,6 +3,7 @@ package com.agroenvios.clientes.controller;
 import com.agroenvios.clientes.dto.auth.*;
 import com.agroenvios.clientes.service.AuthService;
 import com.agroenvios.clientes.service.PasswordResetService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +26,16 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<ResponseLogin> login(@Valid @RequestBody RequestLogin request) {
         return authService.login(request);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<String> logout(HttpServletRequest request) {
+        return authService.logout(request);
+    }
+
+    @GetMapping("/validate")
+    public ResponseEntity<Boolean> validateSession(HttpServletRequest request) {
+        return authService.validateSession(request);
     }
 
     @PostMapping("/password-reset/request")

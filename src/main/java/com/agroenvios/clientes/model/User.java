@@ -1,5 +1,6 @@
 package com.agroenvios.clientes.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -26,6 +27,7 @@ public class User implements UserDetails{
     @Column(nullable = false)
     private String username;
 
+    @JsonIgnore
     @Column(nullable = false)
     private String password;
 
@@ -44,9 +46,15 @@ public class User implements UserDetails{
     @Column(nullable = false)
     private String telefono;
 
+    private String foto;
+
     @Column(nullable = false)
     @Builder.Default
     private Boolean isEmailVerified= false;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isTelefonoVerified= false;
 
     @Column(nullable = false)
     @Builder.Default

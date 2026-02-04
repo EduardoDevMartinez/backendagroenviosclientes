@@ -2,29 +2,40 @@ package com.agroenvios.clientes.model;
 
 import jakarta.persistence.*;
 import lombok.*;
-import java.math.BigDecimal;
+
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "carts")
-public class Cart {
+@Table(name = "metodos_pago")
+public class MetodoPago {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne
-    @JoinColumn(name = "customer_id", nullable = false)
-    private Customer customer;
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
-    @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<CartItem> items;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private TipoPago tipo;
 
-    private BigDecimal totalAmount;
+    @Column(nullable = false)
+    private String titular;
+
+    @Column(nullable = false, length = 4)
+    private String ultimosDigitos;
+
+    private String fechaExpiracion;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean esPrincipal = false;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
@@ -41,5 +52,9 @@ public class Cart {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    public enum TipoPago {
+        TARJETA_CREDITO, TARJETA_DEBITO, TRANSFERENCIA
     }
 }

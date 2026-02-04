@@ -4,8 +4,11 @@ import com.agroenvios.clientes.dto.auth.RequestLogin;
 import com.agroenvios.clientes.dto.auth.RequestRegister;
 import com.agroenvios.clientes.dto.auth.ResponseLogin;
 import com.agroenvios.clientes.events.UserRegisteredEvent;
+import com.agroenvios.clientes.model.InvalidToken;
 import com.agroenvios.clientes.model.User;
+import com.agroenvios.clientes.repository.InvalidTokenRepository;
 import com.agroenvios.clientes.repository.UserRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -14,6 +17,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -23,11 +28,13 @@ import org.springframework.stereotype.Service;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final InvalidTokenRepository invalidTokenRepository;
     private final LogsService logsService;
     private final ApplicationEventPublisher eventPublisher;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
+    private final UserDetailsService userDetailsService;
 
     public ResponseEntity<ResponseLogin> login(RequestLogin request) {
 
@@ -111,8 +118,39 @@ public class AuthService {
                 .body("Usuario registrado exitosamente");
     }
 
+    public ResponseEntity<String> logout(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Token no proporcionado");
+        }
 
+        String token = authHeader.substring(7);
+        String username = jwtService.getUsernameFromToken(token);
 
+        invalidTokenRepository.save(new InvalidToken(token, jwtService.getExpiration(token), username));
 
+        logsService.saveLog("auth", "logout", "Cierre de sesión exitoso", username);
+        log.info("Logout exitoso para: {}", username);
 
+        return ResponseEntity.ok("Sesión cerrada exitosamente");
+    }
+
+    public ResponseEntity<Boolean> validateSession(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.ok(false);
+        }
+
+        String token = authHeader.substring(7);
+
+        try {
+            String username = jwtService.getUsernameFromToken(token);
+            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+            return ResponseEntity.ok(jwtService.isTokenValid(token, userDetails));
+        } catch (Exception e) {
+            log.warn("Validación de sesión fallida: {}", e.getMessage());
+            return ResponseEntity.ok(false);
+        }
+    }
 }
