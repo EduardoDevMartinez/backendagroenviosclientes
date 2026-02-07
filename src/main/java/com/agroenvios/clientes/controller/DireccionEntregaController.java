@@ -1,8 +1,10 @@
 package com.agroenvios.clientes.controller;
 
+import com.agroenvios.clientes.dto.direccion.RequestDireccion;
 import com.agroenvios.clientes.model.DireccionEntrega;
 import com.agroenvios.clientes.model.User;
 import com.agroenvios.clientes.service.DireccionEntregaService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -32,8 +34,8 @@ public class DireccionEntregaController {
     }
 
     @PostMapping
-    public ResponseEntity<DireccionEntrega> crear(@RequestBody DireccionEntrega direccion) {
-        return ResponseEntity.status(201).body(direccionService.crear(direccion, getCurrentUser()));
+    public ResponseEntity<DireccionEntrega> crear(@Valid @RequestBody RequestDireccion request) {
+        return ResponseEntity.status(201).body(direccionService.crear(request, getCurrentUser()));
     }
 
     @PutMapping("/{id}")

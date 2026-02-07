@@ -1,5 +1,6 @@
 package com.agroenvios.clientes.service;
 
+import com.agroenvios.clientes.dto.direccion.RequestDireccion;
 import com.agroenvios.clientes.model.DireccionEntrega;
 import com.agroenvios.clientes.model.User;
 import com.agroenvios.clientes.repository.DireccionEntregaRepository;
@@ -32,13 +33,26 @@ public class DireccionEntregaService {
     }
 
     @Transactional
-    public DireccionEntrega crear(DireccionEntrega direccion, User user) {
-        direccion.setUser(user);
+    public DireccionEntrega crear(RequestDireccion request, User user) {
+        log.info("Creando dirección para usuario: {}, datos: {}", user.getUsername(), request);
+
+        DireccionEntrega direccion = DireccionEntrega.builder()
+                .user(user)
+                .nombre(request.getNombre())
+                .calle(request.getCalle())
+                .ciudad(request.getCiudad())
+                .estado(request.getEstado())
+                .codigoPostal(request.getCodigoPostal())
+                .colonia(request.getColonia())
+                .esPrincipal(request.getEsPrincipal() != null ? request.getEsPrincipal() : false)
+                .build();
+
         if (Boolean.TRUE.equals(direccion.getEsPrincipal())) {
             List<DireccionEntrega> existentes = direccionRepository.findByUserId(user.getId());
             existentes.forEach(d -> d.setEsPrincipal(false));
             direccionRepository.saveAll(existentes);
         }
+
         DireccionEntrega creada = direccionRepository.save(direccion);
         logsService.saveLog("direcciones", "crear", "Dirección creada - ID: " + creada.getId(), user.getUsername());
         return creada;
