@@ -20,17 +20,20 @@ public class MinioService {
     private final S3Client s3Client;
     private final String bucket;
     private final String endpoint;
+    private final String publicEndpoint;
 
     public MinioService(
             @Value("${aws.endpoint}") String endpoint,
+            @Value("${aws.public-endpoint}") String publicEndpoint,
             @Value("${aws.accessKeyId}") String accessKey,
             @Value("${aws.secretKey}") String secretKey,
             @Value("${aws.region}") String region,
             @Value("${aws.s3.bucket}") String bucket
     ) {
         this.endpoint = endpoint;
+        this.publicEndpoint = publicEndpoint;
         this.bucket = bucket;
-        log.info("MinioService inicializado con endpoint: {} bucket: {}", endpoint, bucket);
+        log.info("MinioService inicializado con endpoint: {} publicEndpoint: {} bucket: {}", endpoint, publicEndpoint, bucket);
         this.s3Client = S3Client.builder()
                 .endpointOverride(URI.create(endpoint))
                 .region(Region.of(region))
@@ -61,7 +64,7 @@ public class MinioService {
             throw new RuntimeException("Error al subir archivo");
         }
 
-        return endpoint + "/" + bucket + "/" + key;
+        return publicEndpoint + "/" + bucket + "/" + key;
     }
 
     private String getExtension(String filename) {
