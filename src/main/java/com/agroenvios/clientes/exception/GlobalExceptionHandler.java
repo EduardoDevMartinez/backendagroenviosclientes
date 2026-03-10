@@ -1,6 +1,6 @@
 package com.agroenvios.clientes.exception;
 
-import com.agroenvios.clientes.dto.ErrorResponse;
+import com.agroenvios.clientes.primary.dto.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

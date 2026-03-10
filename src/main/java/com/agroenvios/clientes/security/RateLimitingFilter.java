@@ -1,6 +1,6 @@
 package com.agroenvios.clientes.security;
 
-import com.agroenvios.clientes.dto.ErrorResponse;
+import com.agroenvios.clientes.primary.dto.ErrorResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

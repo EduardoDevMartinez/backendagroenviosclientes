@@ -1,6 +1,6 @@
 package com.agroenvios.clientes.config;
 
-import com.agroenvios.clientes.repository.UserRepository;
+import com.agroenvios.clientes.primary.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
