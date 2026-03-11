@@ -49,6 +49,7 @@ public class SecondaryDBConfig {
         properties.put("hibernate.format_sql", "false");
         properties.put("hibernate.jdbc.batch_size", "50");
         properties.put("hibernate.default_batch_fetch_size", "30");
+        properties.put("hibernate.physical_naming_strategy", "org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy");
 
         return builder
                 .dataSource(dataSource)

@@ -60,6 +60,7 @@ public class PrimaryDBConfig {
         properties.put("hibernate.hbm2ddl.auto", "update");
         properties.put("hibernate.show_sql", "false");
         properties.put("hibernate.format_sql", "false");
+        properties.put("hibernate.physical_naming_strategy", "org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy");
 
         // Optimizaciones de rendimiento
         properties.put("hibernate.jdbc.batch_size", "50");

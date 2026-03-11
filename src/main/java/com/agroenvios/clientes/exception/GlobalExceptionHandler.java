@@ -5,6 +5,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -73,6 +76,45 @@ public class GlobalExceptionHandler {
                         .status(HttpStatus.NOT_FOUND.value())
                         .error("Not Found")
                         .message("El recurso solicitado no existe")
+                        .timestamp(LocalDateTime.now())
+                        .build());
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException ex) {
+        log.warn("Credenciales inválidas: {}", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ErrorResponse.builder()
+                        .status(HttpStatus.UNAUTHORIZED.value())
+                        .error("Unauthorized")
+                        .message("Credenciales inválidas")
+                        .timestamp(LocalDateTime.now())
+                        .build());
+    }
+
+    @ExceptionHandler(LockedException.class)
+    public ResponseEntity<ErrorResponse> handleLocked(LockedException ex) {
+        log.warn("Cuenta bloqueada o inactiva: {}", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ErrorResponse.builder()
+                        .status(HttpStatus.UNAUTHORIZED.value())
+                        .error("Unauthorized")
+                        .message("La cuenta no está activa. Por favor, verifique su correo electrónico")
+                        .timestamp(LocalDateTime.now())
+                        .build());
+    }
+
+    @ExceptionHandler(DisabledException.class)
+    public ResponseEntity<ErrorResponse> handleDisabled(DisabledException ex) {
+        log.warn("Cuenta deshabilitada: {}", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ErrorResponse.builder()
+                        .status(HttpStatus.UNAUTHORIZED.value())
+                        .error("Unauthorized")
+                        .message("La cuenta está deshabilitada")
                         .timestamp(LocalDateTime.now())
                         .build());
     }
