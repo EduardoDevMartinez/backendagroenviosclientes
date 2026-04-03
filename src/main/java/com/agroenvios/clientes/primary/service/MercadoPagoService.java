@@ -55,6 +55,10 @@ public class MercadoPagoService {
     @Value("${mp.webhook.secret:}")
     private String webhookSecret;
 
+    /** Solo para pruebas — poner en false en producción */
+    @Value("${mp.webhook.skip-validation:false}")
+    private boolean skipWebhookValidation;
+
     private final RestTemplate restTemplate;
     private final PagoPendienteRepository pagoPendienteRepository;
     private final UserRepository userRepository;
@@ -132,9 +136,11 @@ public class MercadoPagoService {
      * Retorna false si la firma es inválida o si MP_WEBHOOK_SECRET no está configurado.
      */
     public boolean validarFirmaWebhook(String xSignature, String xRequestId, String dataId) {
-        log.info("[WEBHOOK] secret_loaded={}... (len={})",
-                webhookSecret != null && webhookSecret.length() >= 8 ? webhookSecret.substring(0, 8) : webhookSecret,
-                webhookSecret != null ? webhookSecret.length() : 0);
+        if (skipWebhookValidation) {
+            log.warn("[WEBHOOK] Validación de firma DESACTIVADA — solo para pruebas");
+            return true;
+        }
+
         log.info("[WEBHOOK] x-signature={} | x-request-id={} | data.id={}", xSignature, xRequestId, dataId);
 
         if (webhookSecret == null || webhookSecret.isBlank()) {
