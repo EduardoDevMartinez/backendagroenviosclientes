@@ -6,6 +6,6 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class PreferenciaResponse {
-    /** URL del Checkout Pro de MercadoPago para redirigir al usuario */
     private String initPoint;
+    private String referenciaPago; // UUID para rastrear el pago desde la app
 }
