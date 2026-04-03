@@ -39,6 +39,9 @@ public class MercadoPagoController {
     ) {
         ResponseEntity<Void> ok = ResponseEntity.ok().build();
 
+        log.info("[WEBHOOK-DEBUG] x-signature={} | x-request-id={} | data.id={}",
+                xSignature, xRequestId, dataId);
+
         if (!mercadoPagoService.validarFirmaWebhook(xSignature, xRequestId, dataId)) {
             log.warn("Webhook de MercadoPago rechazado: firma inválida");
             return ok;

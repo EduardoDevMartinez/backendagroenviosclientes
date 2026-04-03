@@ -132,11 +132,14 @@ public class MercadoPagoService {
      * Retorna false si la firma es inválida o si MP_WEBHOOK_SECRET no está configurado.
      */
     public boolean validarFirmaWebhook(String xSignature, String xRequestId, String dataId) {
+        log.info("[WEBHOOK] x-signature={} | x-request-id={} | data.id={}", xSignature, xRequestId, dataId);
+
         if (webhookSecret == null || webhookSecret.isBlank()) {
-            log.error("MP_WEBHOOK_SECRET no configurado — rechazando webhook");
+            log.error("[WEBHOOK] MP_WEBHOOK_SECRET no configurado — rechazando");
             return false;
         }
         if (xSignature == null || xRequestId == null || dataId == null) {
+            log.warn("[WEBHOOK] Parámetros nulos — xSignature={} xRequestId={} dataId={}", xSignature, xRequestId, dataId);
             return false;
         }
 
@@ -150,16 +153,21 @@ public class MercadoPagoService {
             }
         }
 
-        if (ts == null || receivedHash == null) return false;
+        if (ts == null || receivedHash == null) {
+            log.warn("[WEBHOOK] No se pudo parsear ts o v1 del x-signature");
+            return false;
+        }
 
         String manifest = "id:" + dataId + ";request-id:" + xRequestId + ";ts:" + ts + ";";
+        log.info("[WEBHOOK] manifest={}", manifest);
         try {
             Mac mac = Mac.getInstance("HmacSHA256");
             mac.init(new SecretKeySpec(webhookSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
             String expectedHash = HexFormat.of().formatHex(mac.doFinal(manifest.getBytes(StandardCharsets.UTF_8)));
+            log.info("[WEBHOOK] expected={} | received={} | match={}", expectedHash, receivedHash, expectedHash.equals(receivedHash));
             return expectedHash.equals(receivedHash);
         } catch (NoSuchAlgorithmException | InvalidKeyException e) {
-            log.error("Error al calcular firma HMAC: {}", e.getMessage());
+            log.error("[WEBHOOK] Error HMAC: {}", e.getMessage());
             return false;
         }
     }
