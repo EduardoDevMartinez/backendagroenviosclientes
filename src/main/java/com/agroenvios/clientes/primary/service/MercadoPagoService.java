@@ -168,12 +168,13 @@ public class MercadoPagoService {
         }
 
         String manifest = "id:" + dataId + ";request-id:" + xRequestId + ";ts:" + ts + ";";
-        log.info("[WEBHOOK] manifest={}", manifest);
         try {
             Mac mac = Mac.getInstance("HmacSHA256");
-            mac.init(new SecretKeySpec(webhookSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            // El secret es hex — se decodifica a bytes antes de usarlo como clave HMAC
+            byte[] secretBytes = HexFormat.of().parseHex(webhookSecret);
+            mac.init(new SecretKeySpec(secretBytes, "HmacSHA256"));
             String expectedHash = HexFormat.of().formatHex(mac.doFinal(manifest.getBytes(StandardCharsets.UTF_8)));
-            log.info("[WEBHOOK] expected={} | received={} | match={}", expectedHash, receivedHash, expectedHash.equals(receivedHash));
+            log.info("[WEBHOOK] match={}", expectedHash.equals(receivedHash));
             return expectedHash.equals(receivedHash);
         } catch (NoSuchAlgorithmException | InvalidKeyException e) {
             log.error("[WEBHOOK] Error HMAC: {}", e.getMessage());
