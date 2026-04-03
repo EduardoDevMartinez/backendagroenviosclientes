@@ -94,6 +94,16 @@ public class MercadoPagoService {
         pagoPendiente.setExpiresAt(LocalDateTime.now().plusHours(24));
         pagoPendienteRepository.save(pagoPendiente);
 
+        // Validar items antes de enviar a MP
+        for (ItemPagoDto item : request.getItems()) {
+            if (item.getCantidad() <= 0) {
+                throw new IllegalArgumentException("Item '" + item.getNombre() + "' tiene cantidad inválida: " + item.getCantidad());
+            }
+            if (item.getPrecio() <= 0) {
+                throw new IllegalArgumentException("Item '" + item.getNombre() + "' tiene precio inválido: " + item.getPrecio());
+            }
+        }
+
         // Construir request para MP
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -141,8 +151,6 @@ public class MercadoPagoService {
             return true;
         }
 
-        log.info("[WEBHOOK] x-signature={} | x-request-id={} | data.id={}", xSignature, xRequestId, dataId);
-
         if (webhookSecret == null || webhookSecret.isBlank()) {
             log.error("[WEBHOOK] MP_WEBHOOK_SECRET no configurado — rechazando");
             return false;
@@ -170,12 +178,14 @@ public class MercadoPagoService {
         String manifest = "id:" + dataId + ";request-id:" + xRequestId + ";ts:" + ts + ";";
         try {
             Mac mac = Mac.getInstance("HmacSHA256");
-            // El secret es hex — se decodifica a bytes antes de usarlo como clave HMAC
-            byte[] secretBytes = HexFormat.of().parseHex(webhookSecret);
+            byte[] secretBytes = webhookSecret.getBytes(StandardCharsets.UTF_8);
             mac.init(new SecretKeySpec(secretBytes, "HmacSHA256"));
             String expectedHash = HexFormat.of().formatHex(mac.doFinal(manifest.getBytes(StandardCharsets.UTF_8)));
-            log.info("[WEBHOOK] match={}", expectedHash.equals(receivedHash));
-            return expectedHash.equals(receivedHash);
+            boolean match = expectedHash.equals(receivedHash);
+            if (!match) {
+                log.warn("[WEBHOOK] Firma no coincide — manifest='{}', ts={}", manifest, ts);
+            }
+            return match;
         } catch (NoSuchAlgorithmException | InvalidKeyException e) {
             log.error("[WEBHOOK] Error HMAC: {}", e.getMessage());
             return false;
