@@ -109,6 +109,7 @@ public class PedidoService {
         log.info("Pedido id={} creado para referencia={}", pedido.getId(), externalReference);
     }
 
+    @Transactional(readOnly = true)
     public List<PedidoResponse> getMisPedidos(String username) {
         Long userId = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"))
@@ -119,6 +120,7 @@ public class PedidoService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public PedidoResponse getPedidoById(Long pedidoId, String username) {
         Long userId = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"))
