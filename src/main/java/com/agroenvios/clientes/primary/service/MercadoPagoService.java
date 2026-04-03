@@ -214,10 +214,16 @@ public class MercadoPagoService {
     }
 
     private Map<String, Object> toMpItem(ItemPagoDto item) {
+        // MP requires integer quantity — fold cantidad into unit_price as subtotal
+        double subtotal = Math.round(item.getCantidad() * item.getPrecio() * 100.0) / 100.0;
+        String title = item.getNombre();
+        if (item.getCantidad() != Math.floor(item.getCantidad())) {
+            title = item.getCantidad() + " x " + item.getNombre();
+        }
         Map<String, Object> mpItem = new HashMap<>();
-        mpItem.put("title", item.getNombre());
-        mpItem.put("quantity", item.getCantidad());
-        mpItem.put("unit_price", item.getPrecio());
+        mpItem.put("title", title);
+        mpItem.put("quantity", 1);
+        mpItem.put("unit_price", subtotal);
         mpItem.put("currency_id", "MXN");
         return mpItem;
     }

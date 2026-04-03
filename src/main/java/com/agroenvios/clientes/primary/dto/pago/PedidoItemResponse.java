@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 public class PedidoItemResponse {
     private Long id;
     private String nombre;
-    private Integer cantidad;
+    private Double cantidad;
     private BigDecimal precioUnitario;
     private BigDecimal subtotal;
 
