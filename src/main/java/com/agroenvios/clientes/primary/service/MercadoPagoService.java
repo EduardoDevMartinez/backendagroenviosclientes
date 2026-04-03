@@ -132,6 +132,9 @@ public class MercadoPagoService {
      * Retorna false si la firma es inválida o si MP_WEBHOOK_SECRET no está configurado.
      */
     public boolean validarFirmaWebhook(String xSignature, String xRequestId, String dataId) {
+        log.info("[WEBHOOK] secret_loaded={}... (len={})",
+                webhookSecret != null && webhookSecret.length() >= 8 ? webhookSecret.substring(0, 8) : webhookSecret,
+                webhookSecret != null ? webhookSecret.length() : 0);
         log.info("[WEBHOOK] x-signature={} | x-request-id={} | data.id={}", xSignature, xRequestId, dataId);
 
         if (webhookSecret == null || webhookSecret.isBlank()) {
