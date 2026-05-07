@@ -37,6 +37,10 @@ public class DireccionEntrega extends BaseEntity {
 
     private String colonia;
 
+    private Double latitud;
+
+    private Double longitud;
+
     @Column(nullable = false)
     @Builder.Default
     private Boolean esPrincipal = false;

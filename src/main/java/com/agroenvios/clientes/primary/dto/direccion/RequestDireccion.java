@@ -36,5 +36,9 @@ public class RequestDireccion {
     @Size(max = 100, message = "La colonia no puede exceder 100 caracteres")
     private String colonia;
 
+    private Double latitud;
+
+    private Double longitud;
+
     private Boolean esPrincipal;
 }

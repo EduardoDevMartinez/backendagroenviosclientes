@@ -78,14 +78,19 @@ public class PedidoService {
             return;
         }
 
-        BigDecimal total = items.stream()
+        BigDecimal subtotal = items.stream()
                 .map(item -> BigDecimal.valueOf(item.getPrecio())
                         .multiply(BigDecimal.valueOf(item.getCantidad())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        BigDecimal tarifaEnvio = pp.getTarifaEnvio() != null ? pp.getTarifaEnvio() : BigDecimal.ZERO;
+        BigDecimal total = subtotal.add(tarifaEnvio);
+
         Pedido pedido = new Pedido();
         pedido.setUser(pp.getUser());
         pedido.setDireccionId(pp.getDireccionId());
+        pedido.setSubtotal(subtotal);
+        pedido.setTarifaEnvio(tarifaEnvio);
         pedido.setTotal(total);
         pedido.setEstado("APROBADO");
         pedido.setPagoId(pagoId);

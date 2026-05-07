@@ -28,6 +28,12 @@ public class Pedido extends BaseEntity {
     private Long direccionId;
 
     @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal subtotal;
+
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal tarifaEnvio;
+
+    @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal total;
 
     @Column(nullable = false)

@@ -44,6 +44,8 @@ public class DireccionEntregaService {
                 .estado(request.getEstado())
                 .codigoPostal(request.getCodigoPostal())
                 .colonia(request.getColonia())
+                .latitud(request.getLatitud())
+                .longitud(request.getLongitud())
                 .esPrincipal(request.getEsPrincipal() != null ? request.getEsPrincipal() : false)
                 .build();
 
@@ -68,6 +70,8 @@ public class DireccionEntregaService {
         if (datos.getEstado() != null) direccion.setEstado(datos.getEstado());
         if (datos.getCodigoPostal() != null) direccion.setCodigoPostal(datos.getCodigoPostal());
         if (datos.getColonia() != null) direccion.setColonia(datos.getColonia());
+        if (datos.getLatitud() != null) direccion.setLatitud(datos.getLatitud());
+        if (datos.getLongitud() != null) direccion.setLongitud(datos.getLongitud());
 
         if (datos.getEsPrincipal() != null && datos.getEsPrincipal()) {
             List<DireccionEntrega> existentes = direccionRepository.findByUserId(user.getId());

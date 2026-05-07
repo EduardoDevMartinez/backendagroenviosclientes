@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -30,6 +31,9 @@ public class PagoPendiente extends BaseEntity {
 
     @Column(nullable = false)
     private Long direccionId;
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal tarifaEnvio;
 
     @Column(nullable = false)
     private String estado; // PENDIENTE, PROCESADO, RECHAZADO

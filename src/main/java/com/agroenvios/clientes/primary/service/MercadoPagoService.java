@@ -1,5 +1,6 @@
 package com.agroenvios.clientes.primary.service;
 
+import com.agroenvios.clientes.primary.dto.envio.CotizacionEnvio;
 import com.agroenvios.clientes.primary.dto.pago.ItemPagoDto;
 import com.agroenvios.clientes.primary.dto.pago.PreferenciaRequest;
 import com.agroenvios.clientes.primary.dto.pago.PreferenciaResponse;
@@ -63,6 +64,7 @@ public class MercadoPagoService {
     private final PagoPendienteRepository pagoPendienteRepository;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
+    private final EnvioService envioService;
 
     public PreferenciaResponse crearPreferencia(PreferenciaRequest request) {
         if (accessToken == null || accessToken.isBlank()) {
@@ -85,11 +87,15 @@ public class MercadoPagoService {
             throw new RuntimeException("Error al serializar items del carrito", e);
         }
 
+        // Calcular tarifa de envío antes de guardar el pago pendiente
+        CotizacionEnvio cotizacion = envioService.cotizar(request.getDireccionId());
+
         PagoPendiente pagoPendiente = new PagoPendiente();
         pagoPendiente.setId(referenciaPago);
         pagoPendiente.setUser(user);
         pagoPendiente.setItemsJson(itemsJson);
         pagoPendiente.setDireccionId(request.getDireccionId());
+        pagoPendiente.setTarifaEnvio(cotizacion.getTarifa());
         pagoPendiente.setEstado("PENDIENTE");
         pagoPendiente.setExpiresAt(LocalDateTime.now().plusHours(24));
         pagoPendienteRepository.save(pagoPendiente);
@@ -109,9 +115,17 @@ public class MercadoPagoService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(accessToken);
 
-        List<Map<String, Object>> mpItems = request.getItems().stream()
+        List<Map<String, Object>> mpItems = new java.util.ArrayList<>(request.getItems().stream()
                 .map(this::toMpItem)
-                .toList();
+                .toList());
+
+        // Agregar envío como ítem en MercadoPago
+        Map<String, Object> envioItem = new HashMap<>();
+        envioItem.put("title", "Envío");
+        envioItem.put("quantity", 1);
+        envioItem.put("unit_price", cotizacion.getTarifa().doubleValue());
+        envioItem.put("currency_id", "MXN");
+        mpItems.add(envioItem);
 
         Map<String, String> backUrls = new HashMap<>();
         backUrls.put("success", "agroenvios://pago/exito");
@@ -133,8 +147,10 @@ public class MercadoPagoService {
         if (response.getBody() != null) {
             String initPoint = (String) response.getBody().get("init_point");
             if (initPoint != null) {
-                log.info("Preferencia creada: referencia={}", referenciaPago);
-                return new PreferenciaResponse(initPoint, referenciaPago);
+                log.info("Preferencia creada: referencia={}, envio=${}",
+                        referenciaPago, cotizacion.getTarifa());
+                return new PreferenciaResponse(initPoint, referenciaPago,
+                        cotizacion.getTarifa(), cotizacion.getDistanciaKm(), cotizacion.getTiempoMinutos());
             }
         }
 
