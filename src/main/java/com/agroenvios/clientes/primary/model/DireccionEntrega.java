@@ -32,7 +32,7 @@ public class DireccionEntrega extends BaseEntity {
     @Column(nullable = false)
     private String estado;
 
-    @Column(nullable = false)
+    @Column(name = "codigoPostal", nullable = false)
     private Integer codigoPostal;
 
     private String colonia;
