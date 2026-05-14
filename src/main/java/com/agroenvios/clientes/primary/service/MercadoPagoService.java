@@ -146,10 +146,11 @@ public class MercadoPagoService {
 
         if (response.getBody() != null) {
             String initPoint = (String) response.getBody().get("init_point");
+            String sandboxInitPoint = (String) response.getBody().get("sandbox_init_point");
             if (initPoint != null) {
                 log.info("Preferencia creada: referencia={}, envio=${}",
                         referenciaPago, cotizacion.getTarifa());
-                return new PreferenciaResponse(initPoint, referenciaPago,
+                return new PreferenciaResponse(initPoint, sandboxInitPoint, referenciaPago,
                         cotizacion.getTarifa(), cotizacion.getDistanciaKm(), cotizacion.getTiempoMinutos());
             }
         }

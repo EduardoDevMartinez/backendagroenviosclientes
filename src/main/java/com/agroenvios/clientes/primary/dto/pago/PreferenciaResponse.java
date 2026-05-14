@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class PreferenciaResponse {
     private String initPoint;
+    private String sandboxInitPoint;
     private String referenciaPago;
     private BigDecimal tarifaEnvio;
     private double distanciaKm;
