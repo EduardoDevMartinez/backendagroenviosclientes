@@ -210,6 +210,33 @@ public class MercadoPagoService {
     }
 
     /**
+     * Busca un pago en MercadoPago por external_reference (referenciaPago).
+     * Devuelve el primer pago encontrado o null si no existe.
+     */
+    public Map<String, Object> buscarPagoPorReferencia(String referenciaPago) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<Map> response = restTemplate.exchange(
+                    "https://api.mercadopago.com/v1/payments/search?external_reference=" + referenciaPago,
+                    HttpMethod.GET, entity, Map.class
+            );
+            if (response.getBody() != null) {
+                java.util.List<Map<String, Object>> results =
+                        (java.util.List<Map<String, Object>>) response.getBody().get("results");
+                if (results != null && !results.isEmpty()) {
+                    return results.get(0);
+                }
+            }
+        } catch (HttpStatusCodeException e) {
+            log.error("Error al buscar pago por referencia {}: {}", referenciaPago, e.getResponseBodyAsString());
+        }
+        return null;
+    }
+
+    /**
      * Consulta el estado de un pago en MercadoPago por su ID.
      */
     public Map<String, Object> consultarPago(String pagoId) {

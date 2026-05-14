@@ -39,7 +39,7 @@ public class SecurityConfig {
         return http.csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(authRequest -> authRequest
-                        .requestMatchers("/auth/**", "/email/verify", "/pagos/webhook").permitAll()
+                        .requestMatchers("/auth/**", "/email/verify", "/pagos/webhook", "/health").permitAll()
                         .anyRequest().authenticated())
                 .sessionManagement(sessionManager -> sessionManager.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authProvider)

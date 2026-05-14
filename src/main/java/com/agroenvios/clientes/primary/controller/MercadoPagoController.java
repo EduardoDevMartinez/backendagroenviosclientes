@@ -30,6 +30,19 @@ public class MercadoPagoController {
      * Se responde 200 inmediatamente (MP espera máx 22 seg).
      * No requiere JWT (MP llama desde sus servidores).
      */
+    @PostMapping("/recuperar/{referenciaPago}")
+    public ResponseEntity<Map<String, Object>> recuperarPago(@PathVariable String referenciaPago) {
+        Map<String, Object> pago = mercadoPagoService.buscarPagoPorReferencia(referenciaPago);
+        if (pago == null) {
+            return ResponseEntity.notFound().build();
+        }
+        String pagoId = String.valueOf(pago.get("id"));
+        String status = (String) pago.get("status");
+        log.info("Recuperando pago referencia={}, pagoId={}, status={}", referenciaPago, pagoId, status);
+        pedidoService.procesarPago(referenciaPago, pagoId, status);
+        return ResponseEntity.ok(Map.of("referenciaPago", referenciaPago, "pagoId", pagoId, "status", status));
+    }
+
     @PostMapping("/webhook")
     public ResponseEntity<Void> webhook(
             @RequestHeader(value = "x-signature", required = false) String xSignature,
