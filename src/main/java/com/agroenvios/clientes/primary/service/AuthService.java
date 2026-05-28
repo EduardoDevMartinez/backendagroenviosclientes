@@ -8,6 +8,7 @@ import com.agroenvios.clientes.primary.model.InvalidToken;
 import com.agroenvios.clientes.primary.model.User;
 import com.agroenvios.clientes.primary.repository.InvalidTokenRepository;
 import com.agroenvios.clientes.primary.repository.UserRepository;
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -126,12 +127,18 @@ public class AuthService {
         }
 
         String token = authHeader.substring(7);
-        String username = jwtService.getUsernameFromToken(token);
 
-        invalidTokenRepository.save(new InvalidToken(token, jwtService.getExpiration(token), username));
-
-        logsService.saveLog("auth", "logout", "Cierre de sesión exitoso", username);
-        log.info("Logout exitoso para: {}", username);
+        try {
+            String username = jwtService.getUsernameFromToken(token);
+            invalidTokenRepository.save(new InvalidToken(token, jwtService.getExpiration(token), username));
+            logsService.saveLog("auth", "logout", "Cierre de sesión exitoso", username);
+            log.info("Logout exitoso para: {}", username);
+        } catch (ExpiredJwtException ex) {
+            // Token already expired — no need to blacklist it; still complete logout cleanly
+            String username = ex.getClaims().getSubject();
+            logsService.saveLog("auth", "logout", "Cierre de sesión con token expirado", username);
+            log.info("Logout con token expirado para: {}", username);
+        }
 
         return ResponseEntity.ok("Sesión cerrada exitosamente");
     }

@@ -58,6 +58,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         } catch (ExpiredJwtException ex) {
             log.warn("Token JWT expirado: {}", ex.getMessage());
+            // Allow permitted paths (e.g. /auth/logout) to proceed even with an expired token
+            if (request.getRequestURI().startsWith("/auth/")) {
+                filterChain.doFilter(request, response);
+                return;
+            }
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
             response.getWriter().write("{\"error\":\"Token expirado\",\"message\":\"El token de autenticación ha expirado. Por favor, inicie sesión nuevamente.\"}");
