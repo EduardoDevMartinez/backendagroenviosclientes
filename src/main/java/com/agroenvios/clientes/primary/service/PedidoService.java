@@ -30,6 +30,7 @@ public class PedidoService {
     private final PagoPendienteRepository pagoPendienteRepository;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
+    private final ExpoPushNotificationService pushNotificationService;
 
     /**
      * Procesa el resultado de un pago de MercadoPago.
@@ -62,6 +63,7 @@ public class PedidoService {
                 pp.setEstado("RECHAZADO");
                 pagoPendienteRepository.save(pp);
                 log.info("Pago pagoId={} referencia={} fue {}", pagoId, externalReference, status);
+                pushNotificationService.sendPedidoNotification(pp.getUser(), "RECHAZADO", null);
             }
             default -> log.info("Pago pagoId={} referencia={} en estado intermedio: {}",
                     pagoId, externalReference, status);
@@ -112,6 +114,7 @@ public class PedidoService {
         pagoPendienteRepository.save(pp);
 
         log.info("Pedido id={} creado para referencia={}", pedido.getId(), externalReference);
+        pushNotificationService.sendPedidoNotification(pp.getUser(), "APROBADO", pedido.getId());
     }
 
     @Transactional(readOnly = true)

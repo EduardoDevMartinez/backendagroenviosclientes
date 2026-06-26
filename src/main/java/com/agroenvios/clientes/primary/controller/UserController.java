@@ -1,7 +1,9 @@
 package com.agroenvios.clientes.primary.controller;
 
+import com.agroenvios.clientes.primary.dto.user.PushTokenRequest;
 import com.agroenvios.clientes.primary.dto.user.ResponseUser;
 import com.agroenvios.clientes.primary.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -28,6 +30,18 @@ public class UserController {
             @RequestParam(name = "file", required = false) MultipartFile file
     ) {
         return ResponseEntity.ok(userService.updateUser(nombre, paterno, materno, telefono, file));
+    }
+
+    @PostMapping("/push-token")
+    public ResponseEntity<Void> savePushToken(@RequestBody @Valid PushTokenRequest request) {
+        userService.savePushToken(request.getToken());
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/push-token")
+    public ResponseEntity<Void> deletePushToken() {
+        userService.deletePushToken();
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/phone/request-code")

@@ -50,6 +50,8 @@ public class User extends BaseEntity implements UserDetails{
 
     private String foto;
 
+    private String pushToken;
+
     @Column(nullable = false)
     @Builder.Default
     private Boolean isEmailVerified= false;

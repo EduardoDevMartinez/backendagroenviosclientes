@@ -61,6 +61,18 @@ public class UserService {
         return response;
     }
 
+    public void savePushToken(String token) {
+        User user = getCurrentUserEntity();
+        user.setPushToken(token);
+        userRepository.save(user);
+    }
+
+    public void deletePushToken() {
+        User user = getCurrentUserEntity();
+        user.setPushToken(null);
+        userRepository.save(user);
+    }
+
     public ResponseEntity<String> requestPhoneCode() {
         return phoneVerificationService.requestCode(getCurrentUserEntity());
     }

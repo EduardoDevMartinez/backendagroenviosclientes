@@ -32,7 +32,8 @@ public class SecondaryDBConfig {
     }
 
     @Bean
-    public DataSource secondaryDataSource(@Qualifier("secondaryDataSourceProperties") DataSourceProperties properties) {
+    @ConfigurationProperties("spring.datasource.secondary.hikari")
+    public HikariDataSource secondaryDataSource(@Qualifier("secondaryDataSourceProperties") DataSourceProperties properties) {
         return properties.initializeDataSourceBuilder()
                 .type(HikariDataSource.class)
                 .build();

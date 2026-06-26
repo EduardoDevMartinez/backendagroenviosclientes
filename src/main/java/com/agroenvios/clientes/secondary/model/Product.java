@@ -5,7 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -16,21 +17,36 @@ public class Product {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
+
+    private String name;
+
+    private String description;
+
+    private BigDecimal retailPrice;
+
+    private BigDecimal wholesalePrice;
+
+    private BigDecimal discountPercentage;
+
+    private Integer stockAvailable;
+
+    private Integer wholesaleQuantity;
+
+    private String unit;
+
+    @Column(name = "image_key")
+    private String imageKey;
 
     private Boolean active;
 
     private Boolean available;
 
-    private LocalDate createdAt;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "category_id")
+    private CategoryProduct category;
 
-    private String description;
+    private LocalDateTime createdAt;
 
-    private String name;
-
-    private Double retailPrice;
-
-    private Integer stockAvailable;
-
-    private String unit;
+    private LocalDateTime updatedAt;
 }

@@ -36,7 +36,8 @@ public class PrimaryDBConfig {
 
     @Primary
     @Bean
-    public DataSource primaryDataSource(@Qualifier("primaryDataSourceProperties") DataSourceProperties properties) {
+    @ConfigurationProperties("spring.datasource.primary.hikari")
+    public HikariDataSource primaryDataSource(@Qualifier("primaryDataSourceProperties") DataSourceProperties properties) {
         return properties.initializeDataSourceBuilder()
                 .type(HikariDataSource.class)
                 .build();
