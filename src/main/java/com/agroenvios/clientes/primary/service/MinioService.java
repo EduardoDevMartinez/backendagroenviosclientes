@@ -7,10 +7,10 @@ import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.http.SdkHttpClient;
 import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.S3ClientBuilder;
 import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -49,31 +49,35 @@ public class MinioService {
 
         S3Configuration s3Config = S3Configuration.builder().pathStyleAccessEnabled(true).build();
 
-        S3ClientBuilder builder = S3Client.builder()
-                .endpointOverride(URI.create(endpoint))
-                .region(Region.of(region))
-                .credentialsProvider(credentials)
-                .serviceConfiguration(s3Config);
-
+        SdkHttpClient httpClient;
         if (disableSslVerification) {
             TrustManager[] trustAll = new TrustManager[]{new X509TrustManager() {
                 public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
                 public void checkClientTrusted(X509Certificate[] certs, String authType) {}
                 public void checkServerTrusted(X509Certificate[] certs, String authType) {}
             }};
-            builder.httpClient(UrlConnectionHttpClient.builder()
+            httpClient = UrlConnectionHttpClient.builder()
                     .tlsTrustManagersProvider(() -> trustAll)
-                    .build());
+                    .build();
             log.warn("MinioService: verificación SSL deshabilitada");
+        } else {
+            httpClient = UrlConnectionHttpClient.create();
         }
 
-        this.s3Client = builder.build();
+        this.s3Client = S3Client.builder()
+                .endpointOverride(URI.create(endpoint))
+                .region(Region.of(region))
+                .credentialsProvider(credentials)
+                .serviceConfiguration(s3Config)
+                .httpClient(httpClient)
+                .build();
 
         this.s3Presigner = S3Presigner.builder()
                 .endpointOverride(URI.create(endpoint))
                 .region(Region.of(region))
                 .credentialsProvider(credentials)
                 .serviceConfiguration(s3Config)
+                .httpClient(httpClient)
                 .build();
 
         log.info("MinioService inicializado con endpoint: {} bucket: {}", endpoint, bucket);
