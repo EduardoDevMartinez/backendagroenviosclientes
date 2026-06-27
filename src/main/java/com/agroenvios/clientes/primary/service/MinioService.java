@@ -77,7 +77,6 @@ public class MinioService {
                 .region(Region.of(region))
                 .credentialsProvider(credentials)
                 .serviceConfiguration(s3Config)
-                .httpClient(httpClient)
                 .build();
 
         log.info("MinioService inicializado con endpoint: {} bucket: {}", endpoint, bucket);
