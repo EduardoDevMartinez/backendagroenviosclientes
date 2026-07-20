@@ -25,14 +25,16 @@ public class ProductResponseDTO {
     private Integer wholesaleQuantity;
     private String unit;
     private String imageUrl;
+    private String thumbnailUrl;
     private Boolean active;
     private Boolean available;
     private Integer categoryId;
     private String categoryName;
+    private Long tradeShopId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    public static ProductResponseDTO from(Product product, String imageUrl) {
+    public static ProductResponseDTO from(Product product, String imageUrl, String thumbnailUrl) {
         return ProductResponseDTO.builder()
                 .id(product.getId())
                 .name(product.getName())
@@ -44,10 +46,12 @@ public class ProductResponseDTO {
                 .wholesaleQuantity(product.getWholesaleQuantity())
                 .unit(product.getUnit())
                 .imageUrl(imageUrl)
+                .thumbnailUrl(thumbnailUrl)
                 .active(product.getActive())
                 .available(product.getAvailable())
                 .categoryId(product.getCategory() != null ? product.getCategory().getId() : null)
                 .categoryName(product.getCategory() != null ? product.getCategory().getName() : null)
+                .tradeShopId(product.getTradeShopId())
                 .createdAt(product.getCreatedAt())
                 .updatedAt(product.getUpdatedAt())
                 .build();

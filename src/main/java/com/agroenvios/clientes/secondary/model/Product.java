@@ -38,9 +38,17 @@ public class Product {
     @Column(name = "image_key")
     private String imageKey;
 
+    @Column(name = "thumbnail_key")
+    private String thumbnailKey;
+
     private Boolean active;
 
     private Boolean available;
+
+    // Comercio dueño del producto (tabla TradeShop vive en el backend de proveedores;
+    // aquí solo necesitamos el ID para poder armar pedidos que lo referencien)
+    @Column(name = "trade_shop_id")
+    private Long tradeShopId;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "category_id")

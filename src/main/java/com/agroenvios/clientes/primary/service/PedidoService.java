@@ -31,6 +31,7 @@ public class PedidoService {
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
     private final ExpoPushNotificationService pushNotificationService;
+    private final ExternalOrderBridgeService externalOrderBridgeService;
 
     /**
      * Procesa el resultado de un pago de MercadoPago.
@@ -104,6 +105,8 @@ public class PedidoService {
             pi.setNombre(item.getNombre());
             pi.setCantidad(item.getCantidad());
             pi.setPrecioUnitario(BigDecimal.valueOf(item.getPrecio()));
+            pi.setProductId(item.getProductId());
+            pi.setTradeShopId(item.getTradeShopId());
             return pi;
         }).toList();
 
@@ -115,6 +118,9 @@ public class PedidoService {
 
         log.info("Pedido id={} creado para referencia={}", pedido.getId(), externalReference);
         pushNotificationService.sendPedidoNotification(pp.getUser(), "APROBADO", pedido.getId());
+
+        // Replicar el pedido en el sistema de proveedores para que el comercio lo vea
+        externalOrderBridgeService.bridgeToProveedores(pedido, items);
     }
 
     @Transactional(readOnly = true)

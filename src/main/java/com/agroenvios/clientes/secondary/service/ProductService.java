@@ -25,7 +25,15 @@ public class ProductService {
         if (product.getImageKey() != null && !product.getImageKey().isBlank()) {
             imageUrl = minioService.generatePresignedUrl(product.getImageKey(), proveedoresBucket);
         }
-        return ProductResponseDTO.from(product, imageUrl);
+
+        // Si el producto aún no tiene miniatura (subida antes de este feature), usamos
+        // la imagen completa como respaldo para no dejar la miniatura vacía.
+        String thumbnailUrl = imageUrl;
+        if (product.getThumbnailKey() != null && !product.getThumbnailKey().isBlank()) {
+            thumbnailUrl = minioService.generatePresignedUrl(product.getThumbnailKey(), proveedoresBucket);
+        }
+
+        return ProductResponseDTO.from(product, imageUrl, thumbnailUrl);
     }
 
     public List<ProductResponseDTO> getAll() {

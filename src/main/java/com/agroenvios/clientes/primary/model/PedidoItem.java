@@ -28,4 +28,9 @@ public class PedidoItem {
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal precioUnitario;
+
+    // Referencia al producto/comercio real (tabla compartida con proveedores)
+    private Long productId;
+
+    private Long tradeShopId;
 }
