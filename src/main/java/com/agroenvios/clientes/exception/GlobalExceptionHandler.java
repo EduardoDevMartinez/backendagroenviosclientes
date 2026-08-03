@@ -12,6 +12,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
 import java.time.LocalDateTime;
@@ -115,6 +116,25 @@ public class GlobalExceptionHandler {
                         .status(HttpStatus.UNAUTHORIZED.value())
                         .error("Unauthorized")
                         .message("La cuenta está deshabilitada")
+                        .timestamp(LocalDateTime.now())
+                        .build());
+    }
+
+    /**
+     * Respeta el status y el mensaje de las ResponseStatusException lanzadas por los servicios
+     * (por ejemplo "fuera del área de cobertura" al cotizar un envío). Sin este handler caerían
+     * en el genérico de abajo y el cliente solo vería un 500 sin explicación.
+     */
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ErrorResponse> handleResponseStatus(ResponseStatusException ex) {
+        HttpStatus status = HttpStatus.valueOf(ex.getStatusCode().value());
+        log.warn("{} — {}", status, ex.getReason());
+
+        return ResponseEntity.status(status)
+                .body(ErrorResponse.builder()
+                        .status(status.value())
+                        .error(status.getReasonPhrase())
+                        .message(ex.getReason() != null ? ex.getReason() : status.getReasonPhrase())
                         .timestamp(LocalDateTime.now())
                         .build());
     }
