@@ -11,6 +11,9 @@ import java.util.List;
 public class PedidoResponse {
     private Long id;
     private String estado;
+    private String estadoEntrega;
+    private BigDecimal subtotal;
+    private BigDecimal tarifaEnvio;
     private BigDecimal total;
     private Long direccionId;
     private String referenciaPago;
@@ -22,6 +25,9 @@ public class PedidoResponse {
         PedidoResponse dto = new PedidoResponse();
         dto.setId(pedido.getId());
         dto.setEstado(pedido.getEstado());
+        dto.setEstadoEntrega(pedido.getEstadoEntrega());
+        dto.setSubtotal(pedido.getSubtotal());
+        dto.setTarifaEnvio(pedido.getTarifaEnvio());
         dto.setTotal(pedido.getTotal());
         dto.setDireccionId(pedido.getDireccionId());
         dto.setReferenciaPago(pedido.getReferenciaPago());

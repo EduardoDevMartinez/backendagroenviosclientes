@@ -145,4 +145,26 @@ public class PedidoService {
 
         return PedidoResponse.from(pedido);
     }
+
+    /**
+     * Recibe el progreso del pedido desde proveedores (comercio confirmó, listo para
+     * entrega, en camino, entregado, etc.) y lo guarda para que el cliente lo vea.
+     * Silencioso si no encuentra el pedido: puede ser una orden de proveedores que
+     * nunca se originó aquí (creada directamente ahí, o de prueba).
+     */
+    @Transactional
+    public void actualizarEstadoEntrega(String referenciaPago, String status) {
+        if (referenciaPago == null || referenciaPago.isBlank()) {
+            return;
+        }
+
+        pedidoRepository.findByReferenciaPago(referenciaPago).ifPresentOrElse(pedido -> {
+            pedido.setEstadoEntrega(status);
+            pedidoRepository.save(pedido);
+            log.info("Pedido id={} (referencia={}) actualizado a estadoEntrega={}",
+                    pedido.getId(), referenciaPago, status);
+            pushNotificationService.sendPedidoNotification(pedido.getUser(), status, pedido.getId());
+        }, () -> log.warn("No se encontró pedido con referencia={} para actualizar estadoEntrega={}",
+                referenciaPago, status));
+    }
 }

@@ -71,7 +71,13 @@ public class ExpoPushNotificationService {
         return switch (estado) {
             case "APROBADO" -> "Pedido confirmado";
             case "RECHAZADO" -> "Pedido rechazado";
-            case "CANCELADO" -> "Pedido cancelado";
+            case "CANCELADO", "CANCELLED" -> "Pedido cancelado";
+            // Progreso de entrega (viene de proveedores, ver estadoEntrega)
+            case "WAITING_CUSTOMER_ACTION" -> "Necesitamos que revises tu pedido";
+            case "PARTIALLY_FULFILLED" -> "Pedido parcialmente confirmado";
+            case "FULFILLED" -> "Pedido listo";
+            case "IN_DELIVERY" -> "Tu pedido va en camino";
+            case "DELIVERED" -> "Pedido entregado";
             default -> null;
         };
     }
@@ -81,7 +87,12 @@ public class ExpoPushNotificationService {
         return switch (estado) {
             case "APROBADO" -> "Tu pedido " + id + " fue aprobado y está en preparación";
             case "RECHAZADO" -> "Tu pedido " + id + " no pudo ser procesado";
-            case "CANCELADO" -> "Tu pedido " + id + " fue cancelado";
+            case "CANCELADO", "CANCELLED" -> "Tu pedido " + id + " fue cancelado";
+            case "WAITING_CUSTOMER_ACTION" -> "Un producto de tu pedido " + id + " no está disponible, revisa los detalles";
+            case "PARTIALLY_FULFILLED" -> "Parte de tu pedido " + id + " fue confirmado por el comercio";
+            case "FULFILLED" -> "Tu pedido " + id + " está listo y pronto saldrá a reparto";
+            case "IN_DELIVERY" -> "Tu pedido " + id + " va en camino";
+            case "DELIVERED" -> "Tu pedido " + id + " fue entregado. ¡Buen provecho!";
             default -> "";
         };
     }

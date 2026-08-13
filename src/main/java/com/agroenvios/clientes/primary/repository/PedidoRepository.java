@@ -11,4 +11,6 @@ public interface PedidoRepository extends JpaRepository<Pedido, Long> {
     List<Pedido> findByUserIdOrderByCreatedAtDesc(Long userId);
 
     Optional<Pedido> findByIdAndUserId(Long id, Long userId);
+
+    Optional<Pedido> findByReferenciaPago(String referenciaPago);
 }
