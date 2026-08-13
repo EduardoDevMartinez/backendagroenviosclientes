@@ -21,6 +21,8 @@ import org.springframework.web.client.RestTemplate;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -59,6 +61,10 @@ public class MercadoPagoService {
     /** Solo para pruebas — poner en false en producción */
     @Value("${mp.webhook.skip-validation:false}")
     private boolean skipWebhookValidation;
+
+    /** Tasa de respaldo cuando no se puede leer la comisión real de MercadoPago */
+    @Value("${mp.commission.default-rate:0.045}")
+    private BigDecimal comisionMpTasaDefault;
 
     private final RestTemplate restTemplate;
     private final PagoPendienteRepository pagoPendienteRepository;
@@ -255,6 +261,38 @@ public class MercadoPagoService {
                     pagoId, e.getStatusCode(), e.getResponseBodyAsString());
             throw e;
         }
+    }
+
+    /**
+     * Obtiene la comisión que MercadoPago cobró por un pago. Intenta leer el monto real
+     * desde fee_details (lo que MP realmente retuvo); si la consulta falla o no viene el
+     * dato, usa un porcentaje de respaldo configurable sobre el total pagado.
+     */
+    public BigDecimal obtenerComisionMercadoPago(String pagoId, BigDecimal total) {
+        try {
+            BigDecimal comisionReal = extraerComisionDeFeeDetails(consultarPago(pagoId));
+            if (comisionReal != null) {
+                return comisionReal;
+            }
+        } catch (Exception e) {
+            log.warn("No se pudo obtener fee_details de MercadoPago para pagoId={}, usando tasa de respaldo {}: {}",
+                    pagoId, comisionMpTasaDefault, e.getMessage());
+        }
+        return total.multiply(comisionMpTasaDefault).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    @SuppressWarnings("unchecked")
+    private BigDecimal extraerComisionDeFeeDetails(Map<String, Object> pago) {
+        if (pago == null || !(pago.get("fee_details") instanceof List<?> feeDetails) || feeDetails.isEmpty()) {
+            return null;
+        }
+        BigDecimal suma = BigDecimal.ZERO;
+        for (Object entry : feeDetails) {
+            if (entry instanceof Map<?, ?> fee && fee.get("amount") != null) {
+                suma = suma.add(BigDecimal.valueOf(((Number) fee.get("amount")).doubleValue()));
+            }
+        }
+        return suma.compareTo(BigDecimal.ZERO) > 0 ? suma.setScale(2, RoundingMode.HALF_UP) : null;
     }
 
     private Map<String, Object> toMpItem(ItemPagoDto item) {

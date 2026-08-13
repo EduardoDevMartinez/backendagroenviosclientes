@@ -74,6 +74,10 @@ public class ExternalOrderBridgeService {
                         // El pedido de proveedores maneja cantidades enteras; los items por peso
                         // (kg/g/lb) se redondean al entero más cercano.
                         item.put("quantity", (int) Math.round(i.getCantidad()));
+                        // Precio realmente pagado por el cliente para este item — evita que
+                        // proveedores tenga que recalcularlo desde su propio catálogo, que puede
+                        // haber cambiado desde que se hizo el pedido.
+                        item.put("unitPrice", i.getPrecio());
                         return item;
                     })
                     .collect(Collectors.toList());
@@ -91,6 +95,11 @@ public class ExternalOrderBridgeService {
             body.put("deliveryLongitude", direccion.getLongitud());
             body.put("externalReference", pedido.getReferenciaPago());
             body.put("items", itemsPayload);
+            // Montos reales del pago ya aprobado — permiten que proveedores calcule la
+            // comisión del comercio y pague al fletista sobre el envío real, no adivinado.
+            body.put("subtotal", pedido.getSubtotal());
+            body.put("tarifaEnvio", pedido.getTarifaEnvio());
+            body.put("comisionMercadoPago", pedido.getComisionMercadoPago());
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);

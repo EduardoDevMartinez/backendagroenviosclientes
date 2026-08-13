@@ -32,6 +32,7 @@ public class PedidoService {
     private final ObjectMapper objectMapper;
     private final ExpoPushNotificationService pushNotificationService;
     private final ExternalOrderBridgeService externalOrderBridgeService;
+    private final MercadoPagoService mercadoPagoService;
 
     /**
      * Procesa el resultado de un pago de MercadoPago.
@@ -88,6 +89,7 @@ public class PedidoService {
 
         BigDecimal tarifaEnvio = pp.getTarifaEnvio() != null ? pp.getTarifaEnvio() : BigDecimal.ZERO;
         BigDecimal total = subtotal.add(tarifaEnvio);
+        BigDecimal comisionMercadoPago = mercadoPagoService.obtenerComisionMercadoPago(pagoId, total);
 
         Pedido pedido = new Pedido();
         pedido.setUser(pp.getUser());
@@ -95,6 +97,7 @@ public class PedidoService {
         pedido.setSubtotal(subtotal);
         pedido.setTarifaEnvio(tarifaEnvio);
         pedido.setTotal(total);
+        pedido.setComisionMercadoPago(comisionMercadoPago);
         pedido.setEstado("APROBADO");
         pedido.setPagoId(pagoId);
         pedido.setReferenciaPago(externalReference);
