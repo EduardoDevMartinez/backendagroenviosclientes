@@ -50,6 +50,7 @@ public class EnvioConfigAdminService {
         TarifaRangoEnvio rango = TarifaRangoEnvio.builder()
                 .configuracion(config)
                 .nombre(request.getNombre())
+                .color(request.getColor() != null && !request.getColor().isBlank() ? request.getColor() : "#3B82F6")
                 .radioInicialKm(request.getRadioInicialKm())
                 .radioFinalKm(request.getRadioFinalKm())
                 .tarifaBase(request.getTarifaBase())
@@ -66,6 +67,9 @@ public class EnvioConfigAdminService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Rango no encontrado"));
 
         rango.setNombre(request.getNombre());
+        if (request.getColor() != null && !request.getColor().isBlank()) {
+            rango.setColor(request.getColor());
+        }
         rango.setRadioInicialKm(request.getRadioInicialKm());
         rango.setRadioFinalKm(request.getRadioFinalKm());
         rango.setTarifaBase(request.getTarifaBase());
@@ -112,6 +116,7 @@ public class EnvioConfigAdminService {
         return TarifaRangoResponse.builder()
                 .id(rango.getId())
                 .nombre(rango.getNombre())
+                .color(rango.getColor())
                 .radioInicialKm(rango.getRadioInicialKm())
                 .radioFinalKm(rango.getRadioFinalKm())
                 .tarifaBase(rango.getTarifaBase())

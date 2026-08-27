@@ -15,6 +15,7 @@ public class TarifaRangoResponse {
 
     private Long id;
     private String nombre;
+    private String color;
     private BigDecimal radioInicialKm;
     private BigDecimal radioFinalKm;
     private BigDecimal tarifaBase;

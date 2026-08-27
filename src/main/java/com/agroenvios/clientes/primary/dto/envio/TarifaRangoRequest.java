@@ -16,6 +16,8 @@ public class TarifaRangoRequest {
 
     private String nombre;
 
+    private String color;
+
     @NotNull(message = "Debes indicar el radio inicial (km)")
     private BigDecimal radioInicialKm;
 

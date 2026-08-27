@@ -41,6 +41,11 @@ public class TarifaRangoEnvio extends BaseEntity {
     /** Etiqueta para identificarlo en la tabla, ej. "Zona local 0–10 km". */
     private String nombre;
 
+    /** Color hex (ej. "#3B82F6") para distinguir este rango en las visualizaciones de mapa. */
+    @Column(nullable = false, length = 7)
+    @Builder.Default
+    private String color = "#3B82F6";
+
     /** Desde (inclusive), en km de ruta. */
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal radioInicialKm;
