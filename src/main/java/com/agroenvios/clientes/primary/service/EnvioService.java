@@ -75,16 +75,26 @@ public class EnvioService {
                     "La dirección no tiene coordenadas. Actualízala con latitud y longitud.");
         }
 
+        return cotizarPunto(dir.getLatitud(), dir.getLongitud());
+    }
+
+    /**
+     * Misma cotización que {@link #cotizar(Long)} pero para un punto arbitrario en vez
+     * de una dirección guardada — usada por el simulador de envío del panel admin
+     * (ver EnvioConfigInternalController#simular) para probar coberturas y geocercas
+     * sin necesitar una dirección real.
+     */
+    public CotizacionEnvio cotizarPunto(double latDestino, double lngDestino) {
         ConfiguracionEnvio config = configuracionRepository.findActivaConRangos()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
                         "No hay un tarifario de envío activo configurado."));
 
         double[] ruta = llamarORS(config.getOrigenLatitud(), config.getOrigenLongitud(),
-                dir.getLatitud(), dir.getLongitud());
+                latDestino, lngDestino);
         double distanciaKm = ruta[0];
         double tiempoMinutos = ruta[1];
 
-        return calcular(config, dir.getLatitud(), dir.getLongitud(), distanciaKm, tiempoMinutos);
+        return calcular(config, latDestino, lngDestino, distanciaKm, tiempoMinutos);
     }
 
     // ── Cálculo ───────────────────────────────────────────────────────────────
