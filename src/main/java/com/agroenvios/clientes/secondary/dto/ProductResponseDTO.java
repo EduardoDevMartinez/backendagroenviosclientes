@@ -31,10 +31,13 @@ public class ProductResponseDTO {
     private Integer categoryId;
     private String categoryName;
     private Long tradeShopId;
+    private String comercioNombre;
+    private String comercioLogoUrl;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    public static ProductResponseDTO from(Product product, String imageUrl, String thumbnailUrl) {
+    public static ProductResponseDTO from(Product product, String imageUrl, String thumbnailUrl,
+                                           String comercioNombre, String comercioLogoUrl) {
         return ProductResponseDTO.builder()
                 .id(product.getId())
                 .name(product.getName())
@@ -52,6 +55,8 @@ public class ProductResponseDTO {
                 .categoryId(product.getCategory() != null ? product.getCategory().getId() : null)
                 .categoryName(product.getCategory() != null ? product.getCategory().getName() : null)
                 .tradeShopId(product.getTradeShopId())
+                .comercioNombre(comercioNombre)
+                .comercioLogoUrl(comercioLogoUrl)
                 .createdAt(product.getCreatedAt())
                 .updatedAt(product.getUpdatedAt())
                 .build();

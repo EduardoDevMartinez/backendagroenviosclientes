@@ -1,5 +1,7 @@
 package com.agroenvios.clientes.secondary.controller;
 
+import com.agroenvios.clientes.secondary.dto.CategoryOptionDTO;
+import com.agroenvios.clientes.secondary.dto.ProductPageDTO;
 import com.agroenvios.clientes.secondary.dto.ProductResponseDTO;
 import com.agroenvios.clientes.secondary.service.ProductService;
 import lombok.RequiredArgsConstructor;
@@ -20,9 +22,22 @@ public class ProductController {
         return ResponseEntity.ok(productService.getAll());
     }
 
+    /**
+     * Productos disponibles en páginas para scroll infinito. categoryId y search
+     * son opcionales y se resuelven del lado del servidor (no solo en la página cargada).
+     */
     @GetMapping("/available")
-    public ResponseEntity<List<ProductResponseDTO>> getAvailable() {
-        return ResponseEntity.ok(productService.getAvailable());
+    public ResponseEntity<ProductPageDTO> getAvailable(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "18") int size,
+            @RequestParam(required = false) Integer categoryId,
+            @RequestParam(required = false) String search) {
+        return ResponseEntity.ok(productService.getAvailablePaged(categoryId, search, page, size));
+    }
+
+    @GetMapping("/categories")
+    public ResponseEntity<List<CategoryOptionDTO>> getAvailableCategories() {
+        return ResponseEntity.ok(productService.getAvailableCategories());
     }
 
     @GetMapping("/{id}")

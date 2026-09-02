@@ -46,9 +46,15 @@ public class Product {
     private Boolean available;
 
     // Comercio dueño del producto (tabla TradeShop vive en el backend de proveedores;
-    // aquí solo necesitamos el ID para poder armar pedidos que lo referencien)
+    // el id crudo se usa para armar pedidos que lo referencien)
     @Column(name = "trade_shop_id")
     private Long tradeShopId;
+
+    // Misma columna que tradeShopId, pero como relación de solo lectura para poder
+    // mostrar el nombre/logo del comercio en el listado de productos
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "trade_shop_id", insertable = false, updatable = false)
+    private TradeShop tradeShop;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "category_id")
