@@ -21,16 +21,22 @@ public class ExpoPushNotificationService {
 
     private final RestTemplate restTemplate;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     @Async
     public void sendPedidoNotification(User user, String estado, Long pedidoId) {
-        String pushToken = user.getPushToken();
-        if (pushToken == null || pushToken.isBlank()) {
-            return;
-        }
-
         String title = getTitulo(estado);
         if (title == null) {
+            return;
+        }
+        String mensaje = getMensaje(estado, pedidoId);
+
+        // Se guarda para la lista de notificaciones de la app sin importar si el
+        // usuario tiene push token registrado (eso solo decide si además le llega el push).
+        notificationService.createNotification(user, estado, title, mensaje, pedidoId);
+
+        String pushToken = user.getPushToken();
+        if (pushToken == null || pushToken.isBlank()) {
             return;
         }
 
@@ -43,7 +49,7 @@ public class ExpoPushNotificationService {
             Map<String, Object> payload = new HashMap<>();
             payload.put("to", pushToken);
             payload.put("title", title);
-            payload.put("body", getMensaje(estado, pedidoId));
+            payload.put("body", mensaje);
             payload.put("data", data);
 
             HttpHeaders headers = new HttpHeaders();
