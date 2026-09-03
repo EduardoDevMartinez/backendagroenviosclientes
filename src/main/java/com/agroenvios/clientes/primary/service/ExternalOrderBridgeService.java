@@ -3,7 +3,6 @@ package com.agroenvios.clientes.primary.service;
 import com.agroenvios.clientes.primary.dto.pago.ItemPagoDto;
 import com.agroenvios.clientes.primary.model.DireccionEntrega;
 import com.agroenvios.clientes.primary.model.Pedido;
-import com.agroenvios.clientes.primary.model.User;
 import com.agroenvios.clientes.primary.repository.DireccionEntregaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,7 +42,8 @@ public class ExternalOrderBridgeService {
     private String internalApiKey;
 
     @Async
-    public void bridgeToProveedores(Pedido pedido, List<ItemPagoDto> items) {
+    public void bridgeToProveedores(Pedido pedido, List<ItemPagoDto> items,
+                                     String customerEmail, String customerName, String customerPhone) {
         if (proveedoresBaseUrl == null || proveedoresBaseUrl.isBlank()
                 || internalApiKey == null || internalApiKey.isBlank()) {
             log.warn("Puente a proveedores no configurado (proveedores.api.base-url / proveedores.internal.api.key); " +
@@ -62,7 +62,6 @@ public class ExternalOrderBridgeService {
         }
 
         try {
-            User user = pedido.getUser();
             DireccionEntrega direccion = direccionEntregaRepository.findById(pedido.getDireccionId())
                     .orElseThrow(() -> new RuntimeException("Dirección no encontrada: " + pedido.getDireccionId()));
 
@@ -83,9 +82,9 @@ public class ExternalOrderBridgeService {
                     .collect(Collectors.toList());
 
             Map<String, Object> body = new HashMap<>();
-            body.put("customerEmail", user.getCorreo());
-            body.put("customerName", (user.getNombre() + " " + user.getPaterno()).trim());
-            body.put("customerPhone", user.getTelefono());
+            body.put("customerEmail", customerEmail);
+            body.put("customerName", customerName);
+            body.put("customerPhone", customerPhone);
             body.put("deliveryAddress", direccion.getCalle());
             body.put("deliveryCity", direccion.getCiudad());
             body.put("deliveryState", direccion.getEstado());

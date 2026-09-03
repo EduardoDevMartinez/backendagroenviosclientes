@@ -23,8 +23,15 @@ public class ExpoPushNotificationService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
 
+    /**
+     * Recibe username/pushToken ya extraídos (no la entidad completa) porque este método
+     * es @Async: para cuando el hilo del pool lo ejecuta, la sesión de Hibernate del hilo
+     * que originó la llamada ya se cerró, y cualquier getter sobre un proxy lazy de User
+     * revienta con "no session". El proxy `user` solo se usa como referencia de FK para
+     * createNotification, que no requiere inicializarlo.
+     */
     @Async
-    public void sendPedidoNotification(User user, String estado, Long pedidoId) {
+    public void sendPedidoNotification(User user, String username, String pushToken, String estado, Long pedidoId) {
         String title = getTitulo(estado);
         if (title == null) {
             return;
@@ -35,7 +42,6 @@ public class ExpoPushNotificationService {
         // usuario tiene push token registrado (eso solo decide si además le llega el push).
         notificationService.createNotification(user, estado, title, mensaje, pedidoId);
 
-        String pushToken = user.getPushToken();
         if (pushToken == null || pushToken.isBlank()) {
             return;
         }
@@ -62,14 +68,14 @@ public class ExpoPushNotificationService {
             );
 
             if (response.getBody() != null && response.getBody().contains("DeviceNotRegistered")) {
-                log.info("Push token inválido para usuario={}, limpiando token", user.getUsername());
-                userRepository.findByUsername(user.getUsername()).ifPresent(u -> {
+                log.info("Push token inválido para usuario={}, limpiando token", username);
+                userRepository.findByUsername(username).ifPresent(u -> {
                     u.setPushToken(null);
                     userRepository.save(u);
                 });
             }
         } catch (Exception e) {
-            log.warn("Error al enviar notificación push a usuario={}: {}", user.getUsername(), e.getMessage());
+            log.warn("Error al enviar notificación push a usuario={}: {}", username, e.getMessage());
         }
     }
 

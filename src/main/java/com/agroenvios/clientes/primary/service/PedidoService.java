@@ -5,6 +5,7 @@ import com.agroenvios.clientes.primary.dto.pago.PedidoResponse;
 import com.agroenvios.clientes.primary.model.PagoPendiente;
 import com.agroenvios.clientes.primary.model.Pedido;
 import com.agroenvios.clientes.primary.model.PedidoItem;
+import com.agroenvios.clientes.primary.model.User;
 import com.agroenvios.clientes.primary.repository.PagoPendienteRepository;
 import com.agroenvios.clientes.primary.repository.PedidoRepository;
 import com.agroenvios.clientes.primary.repository.UserRepository;
@@ -65,7 +66,8 @@ public class PedidoService {
                 pp.setEstado("RECHAZADO");
                 pagoPendienteRepository.save(pp);
                 log.info("Pago pagoId={} referencia={} fue {}", pagoId, externalReference, status);
-                pushNotificationService.sendPedidoNotification(pp.getUser(), "RECHAZADO", null);
+                User user = pp.getUser();
+                pushNotificationService.sendPedidoNotification(user, user.getUsername(), user.getPushToken(), "RECHAZADO", null);
             }
             default -> log.info("Pago pagoId={} referencia={} en estado intermedio: {}",
                     pagoId, externalReference, status);
@@ -91,8 +93,13 @@ public class PedidoService {
         BigDecimal total = subtotal.add(tarifaEnvio);
         BigDecimal comisionMercadoPago = mercadoPagoService.obtenerComisionMercadoPago(pagoId, total);
 
+        // Se extrae aquí, con la sesión de Hibernate todavía activa, porque más abajo se
+        // pasa a métodos @Async (bridgeToProveedores, sendPedidoNotification) que corren en
+        // otro hilo sin sesión: tocar el proxy lazy de User ahí revienta con "no session".
+        User user = pp.getUser();
+
         Pedido pedido = new Pedido();
-        pedido.setUser(pp.getUser());
+        pedido.setUser(user);
         pedido.setDireccionId(pp.getDireccionId());
         pedido.setSubtotal(subtotal);
         pedido.setTarifaEnvio(tarifaEnvio);
@@ -120,10 +127,11 @@ public class PedidoService {
         pagoPendienteRepository.save(pp);
 
         log.info("Pedido id={} creado para referencia={}", pedido.getId(), externalReference);
-        pushNotificationService.sendPedidoNotification(pp.getUser(), "APROBADO", pedido.getId());
+        pushNotificationService.sendPedidoNotification(user, user.getUsername(), user.getPushToken(), "APROBADO", pedido.getId());
 
         // Replicar el pedido en el sistema de proveedores para que el comercio lo vea
-        externalOrderBridgeService.bridgeToProveedores(pedido, items);
+        externalOrderBridgeService.bridgeToProveedores(pedido, items,
+                user.getCorreo(), (user.getNombre() + " " + user.getPaterno()).trim(), user.getTelefono());
     }
 
     @Transactional(readOnly = true)
@@ -166,7 +174,8 @@ public class PedidoService {
             pedidoRepository.save(pedido);
             log.info("Pedido id={} (referencia={}) actualizado a estadoEntrega={}",
                     pedido.getId(), referenciaPago, status);
-            pushNotificationService.sendPedidoNotification(pedido.getUser(), status, pedido.getId());
+            User user = pedido.getUser();
+            pushNotificationService.sendPedidoNotification(user, user.getUsername(), user.getPushToken(), status, pedido.getId());
         }, () -> log.warn("No se encontró pedido con referencia={} para actualizar estadoEntrega={}",
                 referenciaPago, status));
     }
