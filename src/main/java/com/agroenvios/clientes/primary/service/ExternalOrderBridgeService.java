@@ -43,7 +43,8 @@ public class ExternalOrderBridgeService {
 
     @Async
     public void bridgeToProveedores(Pedido pedido, List<ItemPagoDto> items,
-                                     String customerEmail, String customerName, String customerPhone) {
+                                     String customerEmail, String customerName, String customerPhone,
+                                     String deliveryCode) {
         if (proveedoresBaseUrl == null || proveedoresBaseUrl.isBlank()
                 || internalApiKey == null || internalApiKey.isBlank()) {
             log.warn("Puente a proveedores no configurado (proveedores.api.base-url / proveedores.internal.api.key); " +
@@ -93,6 +94,7 @@ public class ExternalOrderBridgeService {
             body.put("deliveryLatitude", direccion.getLatitud());
             body.put("deliveryLongitude", direccion.getLongitud());
             body.put("externalReference", pedido.getReferenciaPago());
+            body.put("deliveryCode", deliveryCode);
             body.put("items", itemsPayload);
             // Montos reales del pago ya aprobado — permiten que proveedores calcule la
             // comisión del comercio y pague al fletista sobre el envío real, no adivinado.

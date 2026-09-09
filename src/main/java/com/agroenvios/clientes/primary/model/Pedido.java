@@ -56,4 +56,9 @@ public class Pedido extends BaseEntity {
 
     @Column(nullable = false)
     private String referenciaPago; // UUID — external_reference enviado a MercadoPago
+
+    // Código de 4 dígitos que el cliente le comparte al fletista al momento de la
+    // entrega; proveedores lo valida antes de permitir marcar el pedido como DELIVERED.
+    @Column(name = "codigo_entrega", nullable = false, length = 4)
+    private String codigoEntrega;
 }

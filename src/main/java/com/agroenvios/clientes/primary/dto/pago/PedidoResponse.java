@@ -18,6 +18,7 @@ public class PedidoResponse {
     private Long direccionId;
     private String referenciaPago;
     private String pagoId;
+    private String codigoEntrega;
     private List<PedidoItemResponse> items;
     private LocalDateTime createdAt;
 
@@ -32,6 +33,7 @@ public class PedidoResponse {
         dto.setDireccionId(pedido.getDireccionId());
         dto.setReferenciaPago(pedido.getReferenciaPago());
         dto.setPagoId(pedido.getPagoId());
+        dto.setCodigoEntrega(pedido.getCodigoEntrega());
         dto.setCreatedAt(pedido.getCreatedAt());
         dto.setItems(pedido.getItems().stream()
                 .map(PedidoItemResponse::from)

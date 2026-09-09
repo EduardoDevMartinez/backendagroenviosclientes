@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.security.SecureRandom;
 import java.util.List;
 import java.util.Optional;
 
@@ -108,6 +109,7 @@ public class PedidoService {
         pedido.setEstado("APROBADO");
         pedido.setPagoId(pagoId);
         pedido.setReferenciaPago(externalReference);
+        pedido.setCodigoEntrega(String.format("%04d", new SecureRandom().nextInt(10000)));
 
         List<PedidoItem> pedidoItems = items.stream().map(item -> {
             PedidoItem pi = new PedidoItem();
@@ -131,7 +133,8 @@ public class PedidoService {
 
         // Replicar el pedido en el sistema de proveedores para que el comercio lo vea
         externalOrderBridgeService.bridgeToProveedores(pedido, items,
-                user.getCorreo(), (user.getNombre() + " " + user.getPaterno()).trim(), user.getTelefono());
+                user.getCorreo(), (user.getNombre() + " " + user.getPaterno()).trim(), user.getTelefono(),
+                pedido.getCodigoEntrega());
     }
 
     @Transactional(readOnly = true)
