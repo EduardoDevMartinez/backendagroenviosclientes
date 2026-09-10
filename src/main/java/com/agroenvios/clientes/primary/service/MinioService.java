@@ -22,6 +22,8 @@ import javax.net.ssl.X509TrustManager;
 import java.net.URI;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @Slf4j
@@ -31,6 +33,19 @@ public class MinioService {
     private final S3Presigner s3Presigner;
     private final String bucket;
     private final String publicEndpoint;
+
+    // Duración real de la firma: larga para que la URL sirva de cache key estable el
+    // mayor tiempo posible del lado del cliente (RN Image cachea por URL completa).
+    private static final Duration PRESIGN_DURATION = Duration.ofDays(6);
+    private static final Duration PRESIGN_RENEW_BEFORE_EXPIRY = Duration.ofHours(6);
+
+    private record CachedPresignedUrl(String url, Instant expiresAt) {}
+
+    // Sin esta caché, cada carga del catálogo generaba una firma nueva por imagen
+    // (aunque el objeto en el bucket no cambió), y como la URL completa es la cache key
+    // que usa el Image de React Native, la imagen se re-descargaba siempre en vez de
+    // servirse desde el caché local del celular.
+    private final ConcurrentHashMap<String, CachedPresignedUrl> presignedUrlCache = new ConcurrentHashMap<>();
 
     public MinioService(
             @Value("${aws.endpoint}") String endpoint,
@@ -105,15 +120,24 @@ public class MinioService {
 
     public String generatePresignedUrl(String objectKey, String targetBucket) {
         if (objectKey == null || objectKey.isBlank()) return null;
+
+        String cacheKey = targetBucket + "/" + objectKey;
+        CachedPresignedUrl cached = presignedUrlCache.get(cacheKey);
+        if (cached != null && Instant.now().isBefore(cached.expiresAt().minus(PRESIGN_RENEW_BEFORE_EXPIRY))) {
+            return cached.url();
+        }
+
         try {
             GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
-                    .signatureDuration(Duration.ofHours(1))
+                    .signatureDuration(PRESIGN_DURATION)
                     .getObjectRequest(GetObjectRequest.builder()
                             .bucket(targetBucket)
                             .key(objectKey)
                             .build())
                     .build();
-            return s3Presigner.presignGetObject(presignRequest).url().toString();
+            String url = s3Presigner.presignGetObject(presignRequest).url().toString();
+            presignedUrlCache.put(cacheKey, new CachedPresignedUrl(url, Instant.now().plus(PRESIGN_DURATION)));
+            return url;
         } catch (Exception e) {
             log.error("Error generando URL prefirmada para key: {}, bucket: {}: {}", objectKey, targetBucket, e.getMessage());
             return null;
