@@ -71,9 +71,9 @@ public class ExternalOrderBridgeService {
                         Map<String, Object> item = new HashMap<>();
                         item.put("productId", i.getProductId());
                         item.put("selectedTradeShopId", i.getTradeShopId());
-                        // El pedido de proveedores maneja cantidades enteras; los items por peso
-                        // (kg/g/lb) se redondean al entero más cercano.
-                        item.put("quantity", (int) Math.round(i.getCantidad()));
+                        // El pedido de proveedores ya acepta cantidades fraccionarias (kg/g/lb),
+                        // se manda la cantidad real sin redondear.
+                        item.put("quantity", i.getCantidad());
                         // Precio realmente pagado por el cliente para este item — evita que
                         // proveedores tenga que recalcularlo desde su propio catálogo, que puede
                         // haber cambiado desde que se hizo el pedido.
