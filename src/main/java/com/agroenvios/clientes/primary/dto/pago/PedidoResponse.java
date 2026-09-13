@@ -6,6 +6,7 @@ import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Data
 public class PedidoResponse {
@@ -22,7 +23,9 @@ public class PedidoResponse {
     private List<PedidoItemResponse> items;
     private LocalDateTime createdAt;
 
-    public static PedidoResponse from(Pedido pedido) {
+    // tradeShopNombreById: resuelto aparte (tabla tradeShop vive en la BD de
+    // proveedores) para no disparar una consulta por item — ver PedidoService.
+    public static PedidoResponse from(Pedido pedido, Map<Long, String> tradeShopNombreById) {
         PedidoResponse dto = new PedidoResponse();
         dto.setId(pedido.getId());
         dto.setEstado(pedido.getEstado());
@@ -36,7 +39,7 @@ public class PedidoResponse {
         dto.setCodigoEntrega(pedido.getCodigoEntrega());
         dto.setCreatedAt(pedido.getCreatedAt());
         dto.setItems(pedido.getItems().stream()
-                .map(PedidoItemResponse::from)
+                .map(item -> PedidoItemResponse.from(item, tradeShopNombreById.get(item.getTradeShopId())))
                 .toList());
         return dto;
     }

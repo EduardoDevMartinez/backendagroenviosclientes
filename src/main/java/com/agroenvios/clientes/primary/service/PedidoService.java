@@ -9,6 +9,8 @@ import com.agroenvios.clientes.primary.model.User;
 import com.agroenvios.clientes.primary.repository.PagoPendienteRepository;
 import com.agroenvios.clientes.primary.repository.PedidoRepository;
 import com.agroenvios.clientes.primary.repository.UserRepository;
+import com.agroenvios.clientes.secondary.model.TradeShop;
+import com.agroenvios.clientes.secondary.repository.TradeShopRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +23,11 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -31,6 +37,7 @@ public class PedidoService {
     private final PedidoRepository pedidoRepository;
     private final PagoPendienteRepository pagoPendienteRepository;
     private final UserRepository userRepository;
+    private final TradeShopRepository tradeShopRepository;
     private final ObjectMapper objectMapper;
     private final ExpoPushNotificationService pushNotificationService;
     private final ExternalOrderBridgeService externalOrderBridgeService;
@@ -143,8 +150,11 @@ public class PedidoService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"))
                 .getId();
 
-        return pedidoRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
-                .map(PedidoResponse::from)
+        List<Pedido> pedidos = pedidoRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        Map<Long, String> tradeShopNombreById = resolveTradeShopNombres(pedidos);
+
+        return pedidos.stream()
+                .map(pedido -> PedidoResponse.from(pedido, tradeShopNombreById))
                 .toList();
     }
 
@@ -157,7 +167,24 @@ public class PedidoService {
         Pedido pedido = pedidoRepository.findByIdAndUserId(pedidoId, userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido no encontrado"));
 
-        return PedidoResponse.from(pedido);
+        return PedidoResponse.from(pedido, resolveTradeShopNombres(List.of(pedido)));
+    }
+
+    // Un solo findAllById para todos los tradeShopId distintos de todos los items,
+    // en vez de una consulta por item — evita N+1 contra la BD de proveedores.
+    private Map<Long, String> resolveTradeShopNombres(List<Pedido> pedidos) {
+        Set<Long> tradeShopIds = pedidos.stream()
+                .flatMap(p -> p.getItems().stream())
+                .map(PedidoItem::getTradeShopId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        if (tradeShopIds.isEmpty()) {
+            return Map.of();
+        }
+
+        return tradeShopRepository.findAllById(tradeShopIds).stream()
+                .collect(Collectors.toMap(TradeShop::getId, TradeShop::getNombreNegocio));
     }
 
     /**
