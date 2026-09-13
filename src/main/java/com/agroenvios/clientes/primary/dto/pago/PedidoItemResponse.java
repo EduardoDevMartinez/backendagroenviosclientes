@@ -14,8 +14,9 @@ public class PedidoItemResponse {
     private BigDecimal subtotal;
     private Long tradeShopId;
     private String tradeShopNombre;
+    private String tradeShopLogoUrl;
 
-    public static PedidoItemResponse from(PedidoItem item, String tradeShopNombre) {
+    public static PedidoItemResponse from(PedidoItem item, String tradeShopNombre, String tradeShopLogoUrl) {
         PedidoItemResponse dto = new PedidoItemResponse();
         dto.setId(item.getId());
         dto.setNombre(item.getNombre());
@@ -24,6 +25,7 @@ public class PedidoItemResponse {
         dto.setSubtotal(item.getPrecioUnitario().multiply(BigDecimal.valueOf(item.getCantidad())));
         dto.setTradeShopId(item.getTradeShopId());
         dto.setTradeShopNombre(tradeShopNombre);
+        dto.setTradeShopLogoUrl(tradeShopLogoUrl);
         return dto;
     }
 }

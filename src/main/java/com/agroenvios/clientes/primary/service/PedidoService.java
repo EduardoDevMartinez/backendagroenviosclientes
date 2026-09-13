@@ -15,6 +15,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,10 +39,14 @@ public class PedidoService {
     private final PagoPendienteRepository pagoPendienteRepository;
     private final UserRepository userRepository;
     private final TradeShopRepository tradeShopRepository;
+    private final MinioService minioService;
     private final ObjectMapper objectMapper;
     private final ExpoPushNotificationService pushNotificationService;
     private final ExternalOrderBridgeService externalOrderBridgeService;
     private final MercadoPagoService mercadoPagoService;
+
+    @Value("${aws.s3.proveedores-bucket:agroenvios-files}")
+    private String proveedoresBucket;
 
     /**
      * Procesa el resultado de un pago de MercadoPago.
@@ -151,10 +156,10 @@ public class PedidoService {
                 .getId();
 
         List<Pedido> pedidos = pedidoRepository.findByUserIdOrderByCreatedAtDesc(userId);
-        Map<Long, String> tradeShopNombreById = resolveTradeShopNombres(pedidos);
+        Map<Long, PedidoResponse.TradeShopInfo> tradeShopById = resolveTradeShopInfo(pedidos);
 
         return pedidos.stream()
-                .map(pedido -> PedidoResponse.from(pedido, tradeShopNombreById))
+                .map(pedido -> PedidoResponse.from(pedido, tradeShopById))
                 .toList();
     }
 
@@ -167,12 +172,12 @@ public class PedidoService {
         Pedido pedido = pedidoRepository.findByIdAndUserId(pedidoId, userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido no encontrado"));
 
-        return PedidoResponse.from(pedido, resolveTradeShopNombres(List.of(pedido)));
+        return PedidoResponse.from(pedido, resolveTradeShopInfo(List.of(pedido)));
     }
 
     // Un solo findAllById para todos los tradeShopId distintos de todos los items,
     // en vez de una consulta por item — evita N+1 contra la BD de proveedores.
-    private Map<Long, String> resolveTradeShopNombres(List<Pedido> pedidos) {
+    private Map<Long, PedidoResponse.TradeShopInfo> resolveTradeShopInfo(List<Pedido> pedidos) {
         Set<Long> tradeShopIds = pedidos.stream()
                 .flatMap(p -> p.getItems().stream())
                 .map(PedidoItem::getTradeShopId)
@@ -184,7 +189,9 @@ public class PedidoService {
         }
 
         return tradeShopRepository.findAllById(tradeShopIds).stream()
-                .collect(Collectors.toMap(TradeShop::getId, TradeShop::getNombreNegocio));
+                .collect(Collectors.toMap(TradeShop::getId, shop -> new PedidoResponse.TradeShopInfo(
+                        shop.getNombreNegocio(),
+                        minioService.generatePresignedUrl(shop.getImageKey(), proveedoresBucket))));
     }
 
     /**
