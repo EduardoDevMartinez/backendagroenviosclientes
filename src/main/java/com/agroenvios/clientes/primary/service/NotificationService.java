@@ -5,11 +5,13 @@ import com.agroenvios.clientes.primary.model.Notification;
 import com.agroenvios.clientes.primary.model.User;
 import com.agroenvios.clientes.primary.repository.NotificationRepository;
 import com.agroenvios.clientes.primary.repository.UserRepository;
+import com.agroenvios.clientes.sse.SseEmitterRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -20,11 +22,13 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final SseEmitterRegistry sseEmitterRegistry;
 
     /**
      * Persiste la notificación para la lista en la app. Se llama siempre que hay un
      * cambio de estado de pedido con copy definido, independientemente de si el
      * usuario tiene push token registrado (eso solo afecta si además le llega el push).
+     * También la empuja por SSE (GET /notifications/stream) al usuario dueño.
      */
     @Transactional
     public void createNotification(User user, String estado, String title, String message, Long pedidoId) {
@@ -35,7 +39,14 @@ public class NotificationService {
         notification.setMessage(message);
         notification.setPedidoId(pedidoId);
         notification.setIsRead(false);
-        notificationRepository.save(notification);
+        notification = notificationRepository.save(notification);
+
+        sseEmitterRegistry.sendToUser(user.getId(), "notification", NotificationDTO.from(notification));
+    }
+
+    public SseEmitter subscribeToStream(String username) {
+        User user = findUser(username);
+        return sseEmitterRegistry.subscribe(user.getId());
     }
 
     @Transactional(readOnly = true)
