@@ -8,6 +8,8 @@ import com.agroenvios.clientes.primary.model.PagoPendiente;
 import com.agroenvios.clientes.primary.model.User;
 import com.agroenvios.clientes.primary.repository.PagoPendienteRepository;
 import com.agroenvios.clientes.primary.repository.UserRepository;
+import com.agroenvios.clientes.secondary.model.Product;
+import com.agroenvios.clientes.secondary.repository.ProductRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +20,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.server.ResponseStatusException;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -27,11 +30,14 @@ import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Integración con MercadoPago Checkout Pro.
@@ -71,6 +77,7 @@ public class MercadoPagoService {
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
     private final EnvioService envioService;
+    private final ProductRepository productRepository;
 
     public PreferenciaResponse crearPreferencia(PreferenciaRequest request) {
         if (accessToken == null || accessToken.isBlank()) {
@@ -81,6 +88,9 @@ public class MercadoPagoService {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado: " + username));
+
+        // Antes de guardar nada ni cobrar: que lo que se va a pagar todavía se pueda surtir
+        validarStock(request.getItems());
 
         // Generar UUID como referencia de pago (external_reference para MP)
         String referenciaPago = UUID.randomUUID().toString();
@@ -293,6 +303,69 @@ public class MercadoPagoService {
             }
         }
         return suma.compareTo(BigDecimal.ZERO) > 0 ? suma.setScale(2, RoundingMode.HALF_UP) : null;
+    }
+
+    /**
+     * Antes de cobrar, valida contra el stock ACTUAL que cada producto siga disponible en la
+     * cantidad pedida. La app limita la cantidad al stock que vio al abrir el catálogo, pero ese
+     * dato puede estar viejo (otro cliente compró mientras tanto): sin esta revisión se cobraba
+     * un pedido que el comercio ya no podía surtir.
+     *
+     * Es una revisión previa, no una reserva: si otro cliente paga entre esta validación y la
+     * aprobación del pago, el último todavía puede quedarse sin stock.
+     *
+     * Visible al paquete para poder probarla sin armar todo el flujo de MercadoPago.
+     */
+    void validarStock(List<ItemPagoDto> items) {
+        if (items == null || items.isEmpty()) {
+            return;
+        }
+
+        // Un mismo producto puede venir en varias líneas del carrito: se suma lo pedido
+        Map<Long, Double> pedidoPorProducto = new LinkedHashMap<>();
+        Map<Long, String> nombrePorProducto = new HashMap<>();
+        for (ItemPagoDto item : items) {
+            if (item.getProductId() == null) {
+                continue; // carritos anteriores a que se guardara la referencia al producto
+            }
+            pedidoPorProducto.merge(item.getProductId(), item.getCantidad(), Double::sum);
+            nombrePorProducto.putIfAbsent(item.getProductId(), item.getNombre());
+        }
+        if (pedidoPorProducto.isEmpty()) {
+            return;
+        }
+
+        Map<Long, Product> productos = productRepository
+                .findAllById(pedidoPorProducto.keySet().stream().map(Long::intValue).toList())
+                .stream()
+                .collect(Collectors.toMap(p -> p.getId().longValue(), p -> p));
+
+        List<String> problemas = new ArrayList<>();
+        pedidoPorProducto.forEach((productId, cantidad) -> {
+            Product producto = productos.get(productId);
+            String nombre = producto != null ? producto.getName() : nombrePorProducto.get(productId);
+            int stock = producto != null && producto.getStockAvailable() != null
+                    ? producto.getStockAvailable()
+                    : 0;
+
+            boolean visible = producto != null
+                    && !Boolean.FALSE.equals(producto.getActive())
+                    && !Boolean.FALSE.equals(producto.getAvailable());
+            if (!visible) {
+                problemas.add(nombre + " (ya no está disponible)");
+            } else if (stock <= 0) {
+                problemas.add(nombre + " (agotado)");
+            } else if (cantidad > stock) {
+                problemas.add(nombre + " (solo quedan " + stock + ")");
+            }
+        });
+
+        if (!problemas.isEmpty()) {
+            log.warn("Pago rechazado por stock insuficiente: {}", problemas);
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Algunos productos ya no tienen stock suficiente: " + String.join(", ", problemas)
+                            + ". Ajusta tu carrito e intenta de nuevo.");
+        }
     }
 
     private Map<String, Object> toMpItem(ItemPagoDto item) {
