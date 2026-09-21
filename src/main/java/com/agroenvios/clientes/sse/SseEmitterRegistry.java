@@ -47,6 +47,13 @@ public class SseEmitterRegistry {
         }
     }
 
+    /** Envía el evento a TODOS los usuarios conectados, sin importar quiénes son. */
+    public void broadcast(String eventName, Object payload) {
+        for (Long userId : emittersByUser.keySet()) {
+            sendToUser(userId, eventName, payload);
+        }
+    }
+
     /**
      * Heartbeat periódico: mantiene vivas las conexiones a través de proxies
      * (Traefik/Dokploy) que podrían cerrar streams idle, y limpia clientes muertos
