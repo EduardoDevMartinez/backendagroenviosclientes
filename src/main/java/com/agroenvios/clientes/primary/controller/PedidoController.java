@@ -1,5 +1,6 @@
 package com.agroenvios.clientes.primary.controller;
 
+import com.agroenvios.clientes.primary.dto.pago.PedidoPageDTO;
 import com.agroenvios.clientes.primary.dto.pago.PedidoResponse;
 import com.agroenvios.clientes.primary.service.PedidoService;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,19 @@ public class PedidoController {
     public ResponseEntity<List<PedidoResponse>> getMisPedidos(
             @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(pedidoService.getMisPedidos(userDetails.getUsername()));
+    }
+
+    /**
+     * Pedidos en páginas para scroll infinito, con filtro opcional por estado. Aparte de
+     * GET /pedidos, que sigue devolviendo todos (Home y pantalla de pago dependen de eso).
+     */
+    @GetMapping("/paginado")
+    public ResponseEntity<PedidoPageDTO> getMisPedidosPaginado(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String estado) {
+        return ResponseEntity.ok(pedidoService.getMisPedidosPaginado(userDetails.getUsername(), estado, page, size));
     }
 
     @GetMapping("/{id}")

@@ -1,6 +1,7 @@
 package com.agroenvios.clientes.primary.service;
 
 import com.agroenvios.clientes.primary.dto.pago.ItemPagoDto;
+import com.agroenvios.clientes.primary.dto.pago.PedidoPageDTO;
 import com.agroenvios.clientes.primary.dto.pago.PedidoResponse;
 import com.agroenvios.clientes.primary.model.PagoPendiente;
 import com.agroenvios.clientes.primary.model.Pedido;
@@ -16,6 +17,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +26,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.security.SecureRandom;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -34,6 +38,8 @@ import java.util.stream.Collectors;
 @Slf4j
 @RequiredArgsConstructor
 public class PedidoService {
+
+    private static final int MAX_PAGE_SIZE_PEDIDOS = 50;
 
     private final PedidoRepository pedidoRepository;
     private final PagoPendienteRepository pagoPendienteRepository;
@@ -161,6 +167,45 @@ public class PedidoService {
         return pedidos.stream()
                 .map(pedido -> PedidoResponse.from(pedido, tradeShopById))
                 .toList();
+    }
+
+    /**
+     * Pedidos del cliente en páginas para scroll infinito, del más reciente al más antiguo.
+     * {@code estado} es opcional y se filtra aquí (no en la app) para que las páginas y los
+     * contadores de los chips sigan siendo correctos; los conteos por estado se calculan
+     * solo para la página 0.
+     */
+    @Transactional(readOnly = true)
+    public PedidoPageDTO getMisPedidosPaginado(String username, String estado, int page, int size) {
+        Long userId = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"))
+                .getId();
+
+        int pagina = Math.max(page, 0);
+        PageRequest pageable = PageRequest.of(pagina, Math.min(Math.max(size, 1), MAX_PAGE_SIZE_PEDIDOS));
+        String estadoFiltro = (estado == null || estado.isBlank()) ? null : estado.trim().toUpperCase();
+
+        Slice<Pedido> slice = estadoFiltro == null
+                ? pedidoRepository.findByUserIdOrderByCreatedAtDescIdDesc(userId, pageable)
+                : pedidoRepository.findByUserIdAndEstadoOrderByCreatedAtDescIdDesc(userId, estadoFiltro, pageable);
+
+        List<Pedido> pedidos = slice.getContent();
+        Map<Long, PedidoResponse.TradeShopInfo> tradeShopById = resolveTradeShopInfo(pedidos);
+
+        return PedidoPageDTO.builder()
+                .items(pedidos.stream().map(p -> PedidoResponse.from(p, tradeShopById)).toList())
+                .hasMore(slice.hasNext())
+                .page(pagina)
+                .conteos(pagina == 0 ? conteosPorEstado(userId) : null)
+                .build();
+    }
+
+    private Map<String, Long> conteosPorEstado(Long userId) {
+        Map<String, Long> conteos = new HashMap<>();
+        for (Object[] fila : pedidoRepository.contarPorEstado(userId)) {
+            conteos.put((String) fila[0], ((Number) fila[1]).longValue());
+        }
+        return conteos;
     }
 
     @Transactional(readOnly = true)
