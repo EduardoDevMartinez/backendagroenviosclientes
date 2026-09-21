@@ -59,7 +59,7 @@ public class ProductService {
     }
 
     public List<ProductResponseDTO> getAvailable() {
-        return productRepository.findByActiveTrueAndAvailableTrue().stream().map(this::toDTO).toList();
+        return productRepository.findInStock().stream().map(this::toDTO).toList();
     }
 
     public ProductResponseDTO getById(Integer id) {
@@ -69,7 +69,7 @@ public class ProductService {
     }
 
     public List<ProductResponseDTO> getByCategory(Integer categoryId) {
-        return productRepository.findByActiveTrueAndAvailableTrueAndCategoryId(categoryId)
+        return productRepository.findInStockByCategoryId(categoryId)
                 .stream().map(this::toDTO).toList();
     }
 
@@ -79,8 +79,9 @@ public class ProductService {
     }
 
     /**
-     * Trae productos disponibles en páginas para scroll infinito, con filtro
-     * opcional de categoría y búsqueda por nombre resueltos del lado del servidor.
+     * Trae productos disponibles (activos, marcados como disponibles y con stock) en páginas
+     * para scroll infinito, con filtro opcional de categoría y búsqueda por nombre resueltos
+     * del lado del servidor.
      */
     public ProductPageDTO getAvailablePaged(Integer categoryId, String search, int page, int size) {
         String normalizedSearch = (search == null || search.isBlank()) ? null : search.trim();
