@@ -26,6 +26,14 @@ public class DireccionEntrega extends BaseEntity {
     @Column(nullable = false)
     private String calle;
 
+    // Nullables a propósito: las direcciones anteriores a esta columna traen el número
+    // pegado dentro de `calle`, y en zonas rurales es común que no haya número.
+    @Column(name = "numero_exterior", length = 20)
+    private String numeroExterior;
+
+    @Column(name = "numero_interior", length = 20)
+    private String numeroInterior;
+
     @Column(nullable = false)
     private String ciudad;
 

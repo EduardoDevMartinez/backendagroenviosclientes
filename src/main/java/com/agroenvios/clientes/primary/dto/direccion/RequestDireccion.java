@@ -22,6 +22,12 @@ public class RequestDireccion {
     @Size(max = 200, message = "La calle no puede exceder 200 caracteres")
     private String calle;
 
+    @Size(max = 20, message = "El número exterior no puede exceder 20 caracteres")
+    private String numeroExterior;
+
+    @Size(max = 20, message = "El número interior no puede exceder 20 caracteres")
+    private String numeroInterior;
+
     @NotBlank(message = "La ciudad es obligatoria")
     @Size(max = 100, message = "La ciudad no puede exceder 100 caracteres")
     private String ciudad;

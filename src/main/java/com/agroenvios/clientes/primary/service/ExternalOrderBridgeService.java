@@ -86,7 +86,7 @@ public class ExternalOrderBridgeService {
             body.put("customerEmail", customerEmail);
             body.put("customerName", customerName);
             body.put("customerPhone", customerPhone);
-            body.put("deliveryAddress", direccion.getCalle());
+            body.put("deliveryAddress", calleCompleta(direccion));
             body.put("deliveryCity", direccion.getCiudad());
             body.put("deliveryState", direccion.getEstado());
             body.put("deliveryPostalCode", direccion.getCodigoPostal());
@@ -117,5 +117,20 @@ public class ExternalOrderBridgeService {
         } catch (Exception e) {
             log.error("Error replicando pedido id={} en proveedores: {}", pedido.getId(), e.getMessage(), e);
         }
+    }
+
+    /**
+     * Línea de calle tal como debe verla el fletista: "Av Juárez 816 Int. 3". Proveedores
+     * solo maneja un campo de dirección, así que los números se le mandan ya integrados.
+     * Las direcciones anteriores a los campos separados traen el número dentro de
+     * {@code calle} y sus números vienen null, por lo que salen igual que antes.
+     */
+    static String calleCompleta(DireccionEntrega direccion) {
+        StringBuilder sb = new StringBuilder(direccion.getCalle() == null ? "" : direccion.getCalle().trim());
+        String exterior = direccion.getNumeroExterior();
+        String interior = direccion.getNumeroInterior();
+        if (exterior != null && !exterior.isBlank()) sb.append(' ').append(exterior.trim());
+        if (interior != null && !interior.isBlank()) sb.append(" Int. ").append(interior.trim());
+        return sb.toString();
     }
 }

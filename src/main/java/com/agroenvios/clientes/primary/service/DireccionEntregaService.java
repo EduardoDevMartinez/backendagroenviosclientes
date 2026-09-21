@@ -40,6 +40,8 @@ public class DireccionEntregaService {
                 .user(user)
                 .nombre(request.getNombre())
                 .calle(request.getCalle())
+                .numeroExterior(blankToNull(request.getNumeroExterior()))
+                .numeroInterior(blankToNull(request.getNumeroInterior()))
                 .ciudad(request.getCiudad())
                 .estado(request.getEstado())
                 .codigoPostal(request.getCodigoPostal())
@@ -66,6 +68,9 @@ public class DireccionEntregaService {
 
         if (datos.getNombre() != null) direccion.setNombre(datos.getNombre());
         if (datos.getCalle() != null) direccion.setCalle(datos.getCalle());
+        // null = "no vino en el request, se conserva"; cadena vacía = "el usuario lo borró".
+        if (datos.getNumeroExterior() != null) direccion.setNumeroExterior(blankToNull(datos.getNumeroExterior()));
+        if (datos.getNumeroInterior() != null) direccion.setNumeroInterior(blankToNull(datos.getNumeroInterior()));
         if (datos.getCiudad() != null) direccion.setCiudad(datos.getCiudad());
         if (datos.getEstado() != null) direccion.setEstado(datos.getEstado());
         if (datos.getCodigoPostal() != null) direccion.setCodigoPostal(datos.getCodigoPostal());
@@ -88,5 +93,11 @@ public class DireccionEntregaService {
         DireccionEntrega direccion = getDireccionById(direccionId, user);
         direccionRepository.delete(direccion);
         logsService.saveLog("direcciones", "eliminar", "Dirección eliminada - ID: " + direccionId, user.getUsername());
+    }
+
+    private static String blankToNull(String valor) {
+        if (valor == null) return null;
+        String limpio = valor.trim();
+        return limpio.isEmpty() ? null : limpio;
     }
 }
