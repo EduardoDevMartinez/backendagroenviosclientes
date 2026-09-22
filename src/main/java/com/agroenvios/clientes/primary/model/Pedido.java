@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
@@ -61,4 +62,23 @@ public class Pedido extends BaseEntity {
     // entrega; proveedores lo valida antes de permitir marcar el pedido como DELIVERED.
     @Column(name = "codigo_entrega", nullable = false, length = 4)
     private String codigoEntrega;
+
+    // Seguimiento de la réplica hacia proveedores (ExternalOrderBridgeService). Null en
+    // replicadoProveedoresAt = todavía no se confirmó que proveedores tenga el pedido; con
+    // eso, ReplicacionPedidosService lo reintenta solo. Las columnas se crean solas
+    // (hbm2ddl update); los pedidos anteriores quedan en 0 intentos y sin fecha.
+    @Column(name = "replicado_proveedores_at")
+    private LocalDateTime replicadoProveedoresAt;
+
+    // Envíos fallidos hasta ahora (el primer envío, el asíncrono al aprobar el pago, cuenta).
+    @Column(name = "intentos_replicacion", nullable = false, columnDefinition = "int default 0")
+    private int intentosReplicacion;
+
+    @Column(name = "ultimo_intento_replicacion_at")
+    private LocalDateTime ultimoIntentoReplicacionAt;
+
+    // Por qué falló el último envío (p. ej. la respuesta 4xx de proveedores), para poder
+    // diagnosticarlo sin tener que buscar en los logs.
+    @Column(name = "ultimo_error_replicacion", length = 500)
+    private String ultimoErrorReplicacion;
 }

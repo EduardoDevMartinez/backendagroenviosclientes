@@ -4,6 +4,7 @@ import com.agroenvios.clientes.primary.dto.pago.ItemPagoDto;
 import com.agroenvios.clientes.primary.model.DireccionEntrega;
 import com.agroenvios.clientes.primary.model.Pedido;
 import com.agroenvios.clientes.primary.repository.DireccionEntregaRepository;
+import com.agroenvios.clientes.primary.repository.PedidoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,6 +16,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,17 +25,39 @@ import java.util.stream.Collectors;
 /**
  * Puente hacia el backend de proveedores: cuando un pedido se aprueba aquí, crea el
  * pedido correspondiente allá (POST /orders/external) para que el comercio lo vea y
- * pueda atenderlo. Es asíncrono y con try/catch silencioso a propósito: un fallo aquí
- * (proveedores caído, red, etc.) nunca debe afectar la confirmación del pedido local
- * ni la respuesta al webhook de MercadoPago.
+ * pueda atenderlo. El envío inicial es asíncrono y con try/catch silencioso a propósito:
+ * un fallo aquí (proveedores caído, red, etc.) nunca debe afectar la confirmación del
+ * pedido local ni la respuesta al webhook de MercadoPago.
+ *
+ * Como el cliente ya pagó, un fallo no puede quedarse callado: cada envío deja constancia
+ * en el propio pedido (replicado_proveedores_at / intentos / último error) y
+ * {@link ReplicacionPedidosService} reintenta los que no llegaron. Reenviar es seguro:
+ * proveedores identifica el pedido por su referencia de pago y ignora los duplicados.
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ExternalOrderBridgeService {
 
+    /** Envíos fallidos tras los cuales se deja de reintentar solo (el inicial cuenta como el primero). */
+    public static final int MAX_INTENTOS = 12;
+
+    private static final int MAX_LARGO_ERROR = 500;
+
+    public enum Resultado {
+        /** Proveedores respondió 2xx: tiene el pedido (nuevo o ya existente). */
+        REPLICADO,
+        /** No llegó (red, proveedores caído, respuesta 4xx/5xx…): se puede reintentar. */
+        ERROR,
+        /** No se puede replicar nunca (sin productId/tradeShopId): no tiene caso reintentar. */
+        DESCARTADO,
+        /** Falta URL o llave de proveedores: no se intentó nada. */
+        NO_CONFIGURADO
+    }
+
     private final RestTemplate restTemplate;
     private final DireccionEntregaRepository direccionEntregaRepository;
+    private final PedidoRepository pedidoRepository;
 
     @Value("${proveedores.api.base-url:}")
     private String proveedoresBaseUrl;
@@ -41,15 +65,30 @@ public class ExternalOrderBridgeService {
     @Value("${proveedores.internal.api.key:}")
     private String internalApiKey;
 
+    public boolean estaConfigurado() {
+        return proveedoresBaseUrl != null && !proveedoresBaseUrl.isBlank()
+                && internalApiKey != null && !internalApiKey.isBlank();
+    }
+
+    /** Envío inicial, justo al aprobarse el pago: en otro hilo para no frenar la respuesta. */
     @Async
     public void bridgeToProveedores(Pedido pedido, List<ItemPagoDto> items,
                                      String customerEmail, String customerName, String customerPhone,
                                      String deliveryCode) {
-        if (proveedoresBaseUrl == null || proveedoresBaseUrl.isBlank()
-                || internalApiKey == null || internalApiKey.isBlank()) {
+        replicar(pedido, items, customerEmail, customerName, customerPhone, deliveryCode);
+    }
+
+    /**
+     * Envía el pedido a proveedores en el hilo actual y deja constancia del resultado en el
+     * pedido. Nunca lanza: cualquier fallo se devuelve como {@link Resultado#ERROR}.
+     */
+    public Resultado replicar(Pedido pedido, List<ItemPagoDto> items,
+                              String customerEmail, String customerName, String customerPhone,
+                              String deliveryCode) {
+        if (!estaConfigurado()) {
             log.warn("Puente a proveedores no configurado (proveedores.api.base-url / proveedores.internal.api.key); " +
                     "pedido id={} no se replicó allá", pedido.getId());
-            return;
+            return Resultado.NO_CONFIGURADO;
         }
 
         List<ItemPagoDto> itemsConProducto = items.stream()
@@ -59,7 +98,9 @@ public class ExternalOrderBridgeService {
         if (itemsConProducto.isEmpty()) {
             log.warn("Pedido id={} no trae productId/tradeShopId en ningún item (carrito viejo o producto sin " +
                     "comercio asociado); no se puede replicar en proveedores", pedido.getId());
-            return;
+            registrar(() -> pedidoRepository.descartarReplicacion(pedido.getId(), LocalDateTime.now(),
+                    "Sin productId/tradeShopId en ningún item: no se puede replicar", MAX_INTENTOS));
+            return Resultado.DESCARTADO;
         }
 
         try {
@@ -112,11 +153,36 @@ public class ExternalOrderBridgeService {
                     new HttpEntity<>(body, headers),
                     String.class
             );
-
-            log.info("Pedido id={} replicado en proveedores (referencia={})", pedido.getId(), pedido.getReferenciaPago());
         } catch (Exception e) {
-            log.error("Error replicando pedido id={} en proveedores: {}", pedido.getId(), e.getMessage(), e);
+            String motivo = describir(e);
+            log.error("Error replicando pedido id={} en proveedores: {}", pedido.getId(), motivo, e);
+            registrar(() -> pedidoRepository.registrarFalloReplicacion(pedido.getId(), LocalDateTime.now(), motivo));
+            return Resultado.ERROR;
         }
+
+        log.info("Pedido id={} replicado en proveedores (referencia={})", pedido.getId(), pedido.getReferenciaPago());
+        registrar(() -> pedidoRepository.marcarReplicado(pedido.getId(), LocalDateTime.now()));
+        return Resultado.REPLICADO;
+    }
+
+    /**
+     * Guardar la constancia nunca debe tumbar el envío ni cambiar su resultado: si la BD falla
+     * aquí, lo peor es un reintento de más, que proveedores ignora por ser idempotente.
+     */
+    private void registrar(Runnable escritura) {
+        try {
+            escritura.run();
+        } catch (Exception e) {
+            log.warn("No se pudo guardar el estado de replicación a proveedores: {}", e.getMessage());
+        }
+    }
+
+    // Incluye la respuesta de proveedores cuando la hay (su controller devuelve el mensaje
+    // de la excepción en el cuerpo del 400), que es justo lo que hace falta para diagnosticar.
+    private static String describir(Exception e) {
+        String mensaje = e.getMessage() == null ? "" : e.getMessage();
+        String texto = e.getClass().getSimpleName() + (mensaje.isBlank() ? "" : ": " + mensaje);
+        return texto.length() <= MAX_LARGO_ERROR ? texto : texto.substring(0, MAX_LARGO_ERROR);
     }
 
     /**
