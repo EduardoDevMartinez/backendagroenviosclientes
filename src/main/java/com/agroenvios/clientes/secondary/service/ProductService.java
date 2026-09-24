@@ -4,10 +4,13 @@ import com.agroenvios.clientes.primary.service.MinioService;
 import com.agroenvios.clientes.secondary.dto.CategoryOptionDTO;
 import com.agroenvios.clientes.secondary.dto.ProductPageDTO;
 import com.agroenvios.clientes.secondary.dto.ProductResponseDTO;
+import com.agroenvios.clientes.secondary.dto.ProductUnitDTO;
 import com.agroenvios.clientes.secondary.model.Product;
 import com.agroenvios.clientes.secondary.repository.CategoryProductRepository;
 import com.agroenvios.clientes.secondary.repository.ProductRepository;
+import com.agroenvios.clientes.secondary.repository.ProductUnitRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -17,12 +20,14 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ProductService {
 
     private final ProductRepository productRepository;
     private final CategoryProductRepository categoryProductRepository;
+    private final ProductUnitRepository productUnitRepository;
     private final MinioService minioService;
 
     @Value("${aws.s3.proveedores-bucket:agroenvios-files}")
@@ -94,6 +99,22 @@ public class ProductService {
                 .hasMore(result.hasNext())
                 .page(page)
                 .build();
+    }
+
+    /**
+     * Unidades activas con su incremento, administradas desde el panel admin. Si la tabla
+     * todavía no existe (backendAgroBasicos la crea al desplegar) se devuelve vacío y la
+     * app usa sus incrementos por defecto.
+     */
+    public List<ProductUnitDTO> getActiveUnits() {
+        try {
+            return productUnitRepository.findByActiveTrue().stream()
+                    .map(u -> new ProductUnitDTO(u.getCode(), u.getName(), u.getStep(), u.getMinQuantity()))
+                    .toList();
+        } catch (Exception e) {
+            log.warn("No se pudieron leer las unidades de producto: {}", e.getMessage());
+            return List.of();
+        }
     }
 
     public List<CategoryOptionDTO> getAvailableCategories() {

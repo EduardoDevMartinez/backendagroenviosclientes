@@ -3,6 +3,7 @@ package com.agroenvios.clientes.secondary.controller;
 import com.agroenvios.clientes.secondary.dto.CategoryOptionDTO;
 import com.agroenvios.clientes.secondary.dto.ProductPageDTO;
 import com.agroenvios.clientes.secondary.dto.ProductResponseDTO;
+import com.agroenvios.clientes.secondary.dto.ProductUnitDTO;
 import com.agroenvios.clientes.secondary.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -38,6 +39,12 @@ public class ProductController {
     @GetMapping("/categories")
     public ResponseEntity<List<CategoryOptionDTO>> getAvailableCategories() {
         return ResponseEntity.ok(productService.getAvailableCategories());
+    }
+
+    /** Unidades de venta con su incremento (kg de 0.5 en 0.5, g de 50 en 50...). */
+    @GetMapping("/units")
+    public ResponseEntity<List<ProductUnitDTO>> getUnits() {
+        return ResponseEntity.ok(productService.getActiveUnits());
     }
 
     @GetMapping("/{id}")
