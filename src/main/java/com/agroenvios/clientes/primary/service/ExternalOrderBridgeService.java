@@ -135,6 +135,9 @@ public class ExternalOrderBridgeService {
             body.put("deliveryLatitude", direccion.getLatitud());
             body.put("deliveryLongitude", direccion.getLongitud());
             body.put("externalReference", pedido.getReferenciaPago());
+            // Folio compartido: proveedores muestra este mismo número al comercio, al
+            // fletista y al admin, así el "Pedido #N" es igual en todas las apps.
+            body.put("clientOrderNumber", pedido.getId());
             body.put("deliveryCode", deliveryCode);
             body.put("items", itemsPayload);
             // Montos reales del pago ya aprobado — permiten que proveedores calcule la
