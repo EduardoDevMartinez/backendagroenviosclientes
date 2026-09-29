@@ -32,6 +32,11 @@ public interface PedidoRepository extends JpaRepository<Pedido, Long> {
 
     Optional<Pedido> findByReferenciaPago(String referenciaPago);
 
+    // Todos los pedidos con su cliente ya cargado, para el historial de pagos del admin
+    // (open-in-view está apagado: el mapeo a respuesta lee user dentro del servicio).
+    @Query("SELECT p FROM Pedido p JOIN FETCH p.user ORDER BY p.createdAt DESC, p.id DESC")
+    List<Pedido> findAllConUsuarioOrderByCreatedAtDesc();
+
     // Pedidos aprobados que proveedores todavía no confirma tener: sin marca de réplica y sin
     // ningún estado de vuelta (proveedores manda REVIEWING en cuanto crea la orden). El usuario
     // y los items vienen ya cargados porque el reintento los usa fuera de cualquier sesión.
