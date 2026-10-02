@@ -52,7 +52,7 @@ public class NotificationService {
     @Transactional(readOnly = true)
     public List<NotificationDTO> getUserNotifications(String username) {
         User user = findUser(username);
-        return notificationRepository.findByUserOrderByCreatedAtDesc(user).stream()
+        return notificationRepository.findTop100ByUserOrderByCreatedAtDesc(user).stream()
                 .map(NotificationDTO::from)
                 .toList();
     }
