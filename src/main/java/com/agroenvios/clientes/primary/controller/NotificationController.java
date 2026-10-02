@@ -1,6 +1,7 @@
 package com.agroenvios.clientes.primary.controller;
 
 import com.agroenvios.clientes.primary.dto.notification.NotificationDTO;
+import com.agroenvios.clientes.primary.dto.notification.NotificationPageDTO;
 import com.agroenvios.clientes.primary.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
@@ -32,6 +33,14 @@ public class NotificationController {
     @GetMapping
     public ResponseEntity<List<NotificationDTO>> getAll(@AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(notificationService.getUserNotifications(userDetails.getUsername()));
+    }
+
+    @GetMapping("/paged")
+    public ResponseEntity<NotificationPageDTO> getPaged(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(notificationService.getUserNotificationsPaged(userDetails.getUsername(), page, size));
     }
 
     @GetMapping("/unread-count")

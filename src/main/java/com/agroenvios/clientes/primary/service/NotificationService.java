@@ -1,12 +1,15 @@
 package com.agroenvios.clientes.primary.service;
 
 import com.agroenvios.clientes.primary.dto.notification.NotificationDTO;
+import com.agroenvios.clientes.primary.dto.notification.NotificationPageDTO;
 import com.agroenvios.clientes.primary.model.Notification;
 import com.agroenvios.clientes.primary.model.User;
 import com.agroenvios.clientes.primary.repository.NotificationRepository;
 import com.agroenvios.clientes.primary.repository.UserRepository;
 import com.agroenvios.clientes.sse.SseEmitterRegistry;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,6 +58,21 @@ public class NotificationService {
         return notificationRepository.findTop100ByUserOrderByCreatedAtDesc(user).stream()
                 .map(NotificationDTO::from)
                 .toList();
+    }
+
+    private static final int MAX_PAGE_SIZE = 50;
+
+    @Transactional(readOnly = true)
+    public NotificationPageDTO getUserNotificationsPaged(String username, int page, int size) {
+        User user = findUser(username);
+        PageRequest pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), MAX_PAGE_SIZE));
+        Slice<Notification> slice = notificationRepository.findByUserOrderByCreatedAtDescIdDesc(user, pageable);
+        return NotificationPageDTO.builder()
+                .items(slice.getContent().stream().map(NotificationDTO::from).toList())
+                .hasMore(slice.hasNext())
+                .page(pageable.getPageNumber())
+                .unreadCount(notificationRepository.countByUserAndIsReadFalse(user))
+                .build();
     }
 
     @Transactional(readOnly = true)

@@ -2,6 +2,8 @@ package com.agroenvios.clientes.primary.repository;
 
 import com.agroenvios.clientes.primary.model.Notification;
 import com.agroenvios.clientes.primary.model.User;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -16,6 +18,8 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     /** Las más recientes: la pantalla no necesita (ni debe descargar) todo el historial. */
     List<Notification> findTop100ByUserOrderByCreatedAtDesc(User user);
+
+    Slice<Notification> findByUserOrderByCreatedAtDescIdDesc(User user, Pageable pageable);
 
     long countByUserAndIsReadFalse(User user);
 
