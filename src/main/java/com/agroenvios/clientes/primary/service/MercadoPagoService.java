@@ -350,7 +350,8 @@ public class MercadoPagoService {
 
             boolean visible = producto != null
                     && !Boolean.FALSE.equals(producto.getActive())
-                    && !Boolean.FALSE.equals(producto.getAvailable());
+                    && !Boolean.FALSE.equals(producto.getAvailable())
+                    && (producto.getTradeShop() == null || !Boolean.FALSE.equals(producto.getTradeShop().getIsOpen()));
             if (!visible) {
                 problemas.add(nombre + " (ya no está disponible)");
             } else if (stock <= 0) {

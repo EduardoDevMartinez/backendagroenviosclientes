@@ -25,4 +25,9 @@ public class TradeShop {
 
     @Column(name = "image_key")
     private String imageKey;
+
+    // Abierto/cerrado (lo controla el comercio o el admin). Un comercio cerrado no muestra
+    // sus productos en el catálogo. Nulo cuenta como abierto.
+    @Column(name = "is_open")
+    private Boolean isOpen;
 }
