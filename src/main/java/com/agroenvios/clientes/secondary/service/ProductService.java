@@ -95,7 +95,7 @@ public class ProductService {
         // rotación (uno de cada comercio, luego otro de cada uno...) para que el catálogo
         // no muestre todos los de un comercio seguidos. La semilla mantiene estable el
         // orden entre páginas de una misma sesión y lo cambia al refrescar.
-        List<Object[]> rows = productRepository.findAvailableForSearch(categoryId);
+        List<Object[]> rows = candidatosCatalogo(categoryId);
         List<String> tokens = normalizedSearch == null ? List.of() : tokenize(normalizedSearch);
         java.util.Map<Integer, Integer> rank = new java.util.HashMap<>();
         if (!tokens.isEmpty()) {
@@ -119,6 +119,10 @@ public class ProductService {
         List<ProductResponseDTO> items = pageIds.stream()
                 .map(byId::get)
                 .filter(java.util.Objects::nonNull)
+                // La lista de candidatos puede tener unos segundos de antigüedad: lo que se agotó
+                // o se desactivó en ese lapso no se muestra.
+                .filter(p -> Boolean.TRUE.equals(p.getActive()) && Boolean.TRUE.equals(p.getAvailable())
+                        && p.getStockAvailable() != null && p.getStockAvailable() > 0)
                 .map(this::toDTO)
                 .toList();
         return ProductPageDTO.builder()
@@ -126,6 +130,26 @@ public class ProductService {
                 .hasMore(to < ordered.size())
                 .page(page)
                 .build();
+    }
+
+    private static final long CANDIDATOS_TTL_MS = 15_000;
+    private record Candidatos(long expiraEn, List<Object[]> filas) {}
+    private final java.util.concurrent.ConcurrentHashMap<Integer, Candidatos> candidatosCache =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * Productos visibles del catálogo (id, comercio, nombre, comercio, categoría) por categoría,
+     * con una copia de pocos segundos en memoria: cada página y cada cambio de filtro de la app
+     * pedían la lista completa a la base de datos.
+     */
+    private List<Object[]> candidatosCatalogo(Integer categoryId) {
+        int clave = categoryId == null ? -1 : categoryId;
+        long ahora = System.currentTimeMillis();
+        Candidatos guardado = candidatosCache.get(clave);
+        if (guardado != null && guardado.expiraEn() > ahora) return guardado.filas();
+        List<Object[]> filas = productRepository.findAvailableForSearch(categoryId);
+        candidatosCache.put(clave, new Candidatos(ahora + CANDIDATOS_TTL_MS, filas));
+        return filas;
     }
 
     private static String normalize(String text) {
