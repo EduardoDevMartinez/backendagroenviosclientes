@@ -10,4 +10,5 @@ import lombok.NoArgsConstructor;
 public class CategoryOptionDTO {
     private Integer id;
     private String name;
+    private Long productCount;
 }

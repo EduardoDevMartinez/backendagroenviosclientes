@@ -199,8 +199,8 @@ public class ProductService {
     }
 
     public List<CategoryOptionDTO> getAvailableCategories() {
-        return categoryProductRepository.findByActiveTrue().stream()
-                .map(c -> new CategoryOptionDTO(c.getId(), c.getName()))
+        return productRepository.countAvailableByCategory().stream()
+                .map(r -> new CategoryOptionDTO(((Number) r[0]).intValue(), (String) r[1], ((Number) r[2]).longValue()))
                 .toList();
     }
 }

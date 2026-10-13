@@ -51,4 +51,13 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
             "AND (t IS NULL OR t.isOpen IS NULL OR t.isOpen = true) " +
             "AND (:categoryId IS NULL OR c.id = :categoryId)")
     List<Object[]> findAvailableForSearch(@Param("categoryId") Integer categoryId);
+
+    /** Categorías con al menos un producto visible en el catálogo y cuántos tienen, de más a menos. */
+    @Query("SELECT c.id, c.name, COUNT(p) FROM Product p " +
+            "LEFT JOIN p.tradeShop t JOIN p.category c " +
+            "WHERE p.active = true AND p.available = true AND p.stockAvailable > 0 " +
+            "AND (t IS NULL OR t.isOpen IS NULL OR t.isOpen = true) " +
+            "AND c.active = true " +
+            "GROUP BY c.id, c.name ORDER BY COUNT(p) DESC, c.name ASC")
+    List<Object[]> countAvailableByCategory();
 }
