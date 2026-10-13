@@ -32,8 +32,9 @@ public class ProductController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "18") int size,
             @RequestParam(required = false) Integer categoryId,
-            @RequestParam(required = false) String search) {
-        return ResponseEntity.ok(productService.getAvailablePaged(categoryId, search, page, size));
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Long seed) {
+        return ResponseEntity.ok(productService.getAvailablePaged(categoryId, search, page, size, seed));
     }
 
     @GetMapping("/categories")
