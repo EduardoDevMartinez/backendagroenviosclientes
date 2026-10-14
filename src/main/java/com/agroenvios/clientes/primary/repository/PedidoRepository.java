@@ -24,6 +24,19 @@ public interface PedidoRepository extends JpaRepository<Pedido, Long> {
 
     Slice<Pedido> findByUserIdAndEstadoOrderByCreatedAtDescIdDesc(Long userId, String estado, Pageable pageable);
 
+    // Búsqueda por número de pedido o por nombre de un producto; estado opcional (null = todos).
+    // :patron ya viene en minúsculas y con comodines (%texto%).
+    @Query("""
+            SELECT p FROM Pedido p
+            WHERE p.user.id = :userId
+              AND (:estado IS NULL OR p.estado = :estado)
+              AND (CAST(p.id AS string) LIKE :patron
+                   OR EXISTS (SELECT 1 FROM PedidoItem i WHERE i.pedido = p AND LOWER(i.nombre) LIKE :patron))
+            ORDER BY p.createdAt DESC, p.id DESC
+            """)
+    Slice<Pedido> buscarDelUsuario(@Param("userId") Long userId, @Param("estado") String estado,
+                                   @Param("patron") String patron, Pageable pageable);
+
     // Filas [estado, cantidad]
     @Query("SELECT p.estado, COUNT(p) FROM Pedido p WHERE p.user.id = :userId GROUP BY p.estado")
     List<Object[]> contarPorEstado(@Param("userId") Long userId);

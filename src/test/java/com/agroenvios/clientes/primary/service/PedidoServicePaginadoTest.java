@@ -75,7 +75,7 @@ class PedidoServicePaginadoTest {
         when(pedidoRepository.contarPorEstado(USER_ID))
                 .thenReturn(List.of(new Object[]{"APROBADO", 7L}, new Object[]{"PENDIENTE", 2L}));
 
-        PedidoPageDTO page = pedidoService.getMisPedidosPaginado("jeduardo", null, 0, 2);
+        PedidoPageDTO page = pedidoService.getMisPedidosPaginado("jeduardo", null, null, 0, 2);
 
         assertEquals(List.of(3L, 2L), page.getItems().stream().map(i -> i.getId()).toList());
         assertTrue(page.isHasMore());
@@ -90,7 +90,7 @@ class PedidoServicePaginadoTest {
         when(pedidoRepository.findByUserIdOrderByCreatedAtDescIdDesc(eq(USER_ID), any(Pageable.class)))
                 .thenReturn(new SliceImpl<>(List.of(pedido(1, "APROBADO")), Pageable.ofSize(10), false));
 
-        PedidoPageDTO page = pedidoService.getMisPedidosPaginado("jeduardo", "", 3, 10);
+        PedidoPageDTO page = pedidoService.getMisPedidosPaginado("jeduardo", "", null, 3, 10);
 
         assertEquals(3, page.getPage());
         assertFalse(page.isHasMore());
@@ -104,7 +104,7 @@ class PedidoServicePaginadoTest {
         when(pedidoRepository.findByUserIdAndEstadoOrderByCreatedAtDescIdDesc(eq(USER_ID), eq("APROBADO"), any(Pageable.class)))
                 .thenReturn(new SliceImpl<>(List.of(pedido(9, "APROBADO")), Pageable.ofSize(10), false));
 
-        PedidoPageDTO page = pedidoService.getMisPedidosPaginado("jeduardo", " aprobado ", 1, 10);
+        PedidoPageDTO page = pedidoService.getMisPedidosPaginado("jeduardo", " aprobado ", null, 1, 10);
 
         assertEquals(1, page.getItems().size());
         verify(pedidoRepository, never()).findByUserIdOrderByCreatedAtDescIdDesc(any(), any());
@@ -117,7 +117,7 @@ class PedidoServicePaginadoTest {
                 .thenReturn(new SliceImpl<>(List.of(), Pageable.ofSize(1), false));
         when(pedidoRepository.contarPorEstado(USER_ID)).thenReturn(List.of());
 
-        pedidoService.getMisPedidosPaginado("jeduardo", null, -4, 5000);
+        pedidoService.getMisPedidosPaginado("jeduardo", null, null, -4, 5000);
 
         Pageable pageable = paginaPedida();
         assertEquals(50, pageable.getPageSize());

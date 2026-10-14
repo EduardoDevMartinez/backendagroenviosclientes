@@ -176,7 +176,7 @@ public class PedidoService {
      * solo para la página 0.
      */
     @Transactional(readOnly = true)
-    public PedidoPageDTO getMisPedidosPaginado(String username, String estado, int page, int size) {
+    public PedidoPageDTO getMisPedidosPaginado(String username, String estado, String busqueda, int page, int size) {
         Long userId = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"))
                 .getId();
@@ -185,9 +185,16 @@ public class PedidoService {
         PageRequest pageable = PageRequest.of(pagina, Math.min(Math.max(size, 1), MAX_PAGE_SIZE_PEDIDOS));
         String estadoFiltro = (estado == null || estado.isBlank()) ? null : estado.trim().toUpperCase();
 
-        Slice<Pedido> slice = estadoFiltro == null
-                ? pedidoRepository.findByUserIdOrderByCreatedAtDescIdDesc(userId, pageable)
-                : pedidoRepository.findByUserIdAndEstadoOrderByCreatedAtDescIdDesc(userId, estadoFiltro, pageable);
+        String texto = busqueda == null ? "" : busqueda.trim().replaceFirst("^#", "").toLowerCase();
+
+        Slice<Pedido> slice;
+        if (!texto.isEmpty()) {
+            slice = pedidoRepository.buscarDelUsuario(userId, estadoFiltro, "%" + texto + "%", pageable);
+        } else if (estadoFiltro == null) {
+            slice = pedidoRepository.findByUserIdOrderByCreatedAtDescIdDesc(userId, pageable);
+        } else {
+            slice = pedidoRepository.findByUserIdAndEstadoOrderByCreatedAtDescIdDesc(userId, estadoFiltro, pageable);
+        }
 
         List<Pedido> pedidos = slice.getContent();
         Map<Long, PedidoResponse.TradeShopInfo> tradeShopById = resolveTradeShopInfo(pedidos);

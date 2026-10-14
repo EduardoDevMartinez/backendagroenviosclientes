@@ -39,8 +39,9 @@ public class PedidoController {
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) String estado) {
-        return ResponseEntity.ok(pedidoService.getMisPedidosPaginado(userDetails.getUsername(), estado, page, size));
+            @RequestParam(required = false) String estado,
+            @RequestParam(required = false) String q) {
+        return ResponseEntity.ok(pedidoService.getMisPedidosPaginado(userDetails.getUsername(), estado, q, page, size));
     }
 
     @GetMapping("/{id}")
