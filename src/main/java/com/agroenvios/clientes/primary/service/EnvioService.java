@@ -89,17 +89,21 @@ public class EnvioService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
                         "No hay un tarifario de envío activo configurado."));
 
+        // Se valida antes de llamar a ORS: fuera de la zona de entrega no hay nada que cotizar
+        List<GeocercaEnvio> geocercas = geocercaRepository.findActivasConPuntos();
+        validarZonaDeEntrega(geocercas, latDestino, lngDestino);
+
         double[] ruta = llamarORS(config.getOrigenLatitud(), config.getOrigenLongitud(),
                 latDestino, lngDestino);
         double distanciaKm = ruta[0];
         double tiempoMinutos = ruta[1];
 
-        return calcular(config, latDestino, lngDestino, distanciaKm, tiempoMinutos);
+        return calcular(config, geocercas, latDestino, lngDestino, distanciaKm, tiempoMinutos);
     }
 
     // ── Cálculo ───────────────────────────────────────────────────────────────
 
-    private CotizacionEnvio calcular(ConfiguracionEnvio config, double latDestino, double lngDestino,
+    private CotizacionEnvio calcular(ConfiguracionEnvio config, List<GeocercaEnvio> geocercas, double latDestino, double lngDestino,
                                      double distanciaKm, double tiempoMinutos) {
 
         BigDecimal distancia = BigDecimal.valueOf(distanciaKm);
@@ -117,7 +121,7 @@ public class EnvioService {
                 .add(costoTiempo)
                 .setScale(2, RoundingMode.HALF_UP);
 
-        List<GeocercaEnvio> aplicables = geocercasQueAplican(latDestino, lngDestino);
+        List<GeocercaEnvio> aplicables = geocercasQueAplican(geocercas, latDestino, lngDestino);
 
         BigDecimal multiplicador = BigDecimal.ONE;
         BigDecimal recargo = BigDecimal.ZERO;
@@ -192,11 +196,35 @@ public class EnvioService {
     }
 
     /**
+     * La geocerca activa más grande (por área) es la zona de entrega: fuera de ella no se
+     * hacen pedidos. Las zonas que bloquean el envío son recortes de esa zona, no cobertura,
+     * así que no cuentan como candidatas. Sin ninguna geocerca activa no hay restricción.
+     */
+    private void validarZonaDeEntrega(List<GeocercaEnvio> activas, double lat, double lng) {
+        activas.stream()
+                .filter(g -> !Boolean.TRUE.equals(g.getBloqueaEnvio()))
+                .max(Comparator.comparingDouble(this::areaM2))
+                .filter(zona -> !contiene(zona, lat, lng))
+                .ifPresent(zona -> {
+                    log.info("Destino ({}, {}) fuera de la zona de entrega: {}", lat, lng, zona.getNombre());
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                            "Esta dirección está fuera de nuestra zona de entrega (" + zona.getNombre() + ").");
+                });
+    }
+
+    private double areaM2(GeocercaEnvio g) {
+        if (g.getTipo() == TipoGeocerca.CIRCULO) {
+            return g.getRadioMetros() == null ? 0 : Math.PI * g.getRadioMetros() * g.getRadioMetros();
+        }
+        return GeoUtils.areaPoligonoM2(g.getPuntos());
+    }
+
+    /**
      * Geocercas activas que contienen al destino, ya resueltas por prioridad.
      * Si alguna bloquea el envío, corta con 400. Si alguna es exclusiva, se usa solo esa.
      */
-    private List<GeocercaEnvio> geocercasQueAplican(double lat, double lng) {
-        List<GeocercaEnvio> coincidencias = geocercaRepository.findActivasConPuntos().stream()
+    private List<GeocercaEnvio> geocercasQueAplican(List<GeocercaEnvio> activas, double lat, double lng) {
+        List<GeocercaEnvio> coincidencias = activas.stream()
                 .filter(g -> contiene(g, lat, lng))
                 .toList();
 

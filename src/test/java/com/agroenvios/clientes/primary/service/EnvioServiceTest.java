@@ -29,6 +29,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -98,7 +100,8 @@ class EnvioServiceTest {
 
         Map<String, Object> summary = Map.of("distance", km * 1000, "duration", minutos * 60);
         Map<String, Object> body = Map.of("routes", List.of(Map.of("summary", summary)));
-        when(restTemplate.postForEntity(anyString(), any(HttpEntity.class), any()))
+        // lenient: al rechazar por zona de entrega ORS ni siquiera se consulta
+        lenient().when(restTemplate.postForEntity(anyString(), any(HttpEntity.class), any()))
                 .thenReturn(new ResponseEntity<>(body, HttpStatus.OK));
     }
 
@@ -184,30 +187,62 @@ class EnvioServiceTest {
         assertThat(cotizacion.getGeocercas()).hasSize(1);
     }
 
+    private GeocercaEnvio circulo(Long id, String nombre, double lat, double lng, double radio, String mult) {
+        return GeocercaEnvio.builder()
+                .id(id)
+                .nombre(nombre)
+                .tipo(TipoGeocerca.CIRCULO)
+                .multiplicador(new BigDecimal(mult))
+                .recargoFijo(BigDecimal.ZERO)
+                .prioridad(1)
+                .activa(true)
+                .exclusiva(false)
+                .bloqueaEnvio(false)
+                .centroLatitud(lat)
+                .centroLongitud(lng)
+                .radioMetros(radio)
+                .build();
+    }
+
     @Test
     @DisplayName("Una geocerca lejana no afecta la tarifa")
     void ignoraGeocercasQueNoContienenAlDestino() {
         rutaDe(9, 20);
         when(geocercaRepository.findActivasConPuntos()).thenReturn(List.of(
-                GeocercaEnvio.builder()
-                        .id(2L)
-                        .nombre("Otra ciudad")
-                        .tipo(TipoGeocerca.CIRCULO)
-                        .multiplicador(new BigDecimal("2.000"))
-                        .recargoFijo(BigDecimal.ZERO)
-                        .prioridad(1)
-                        .activa(true)
-                        .exclusiva(false)
-                        .bloqueaEnvio(false)
-                        .centroLatitud(19.4326)
-                        .centroLongitud(-99.1332)
-                        .radioMetros(5000d)
-                        .build()));
+                circulo(1L, "Zona de entrega", DESTINO_LAT, DESTINO_LNG, 20000d, "1.000"),
+                circulo(2L, "Otra ciudad", 19.4326, -99.1332, 5000d, "2.000")));
 
         CotizacionEnvio cotizacion = envioService.cotizar(7L);
 
         assertThat(cotizacion.getTarifa()).isEqualByComparingTo("300.00");
-        assertThat(cotizacion.getGeocercas()).isEmpty();
+        assertThat(cotizacion.getGeocercas()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("Fuera de la geocerca más grande no se puede pedir, aunque caiga en una chica")
+    void rechazaDestinosFueraDeLaGeocercaMasGrande() {
+        rutaDe(9, 20);
+        when(geocercaRepository.findActivasConPuntos()).thenReturn(List.of(
+                circulo(1L, "Zona de entrega", 19.4326, -99.1332, 20000d, "1.000"),
+                circulo(2L, "Centro", DESTINO_LAT, DESTINO_LNG, 2500d, "1.300")));
+
+        assertThatThrownBy(() -> envioService.cotizar(7L))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("fuera de nuestra zona de entrega");
+        verifyNoInteractions(restTemplate);
+    }
+
+    @Test
+    @DisplayName("Una zona que bloquea el envío no cuenta como zona de entrega")
+    void laZonaBloqueadaNoDefineLaCobertura() {
+        rutaDe(9, 20);
+        GeocercaEnvio bloqueada = circulo(1L, "Bloqueada lejana", 19.4326, -99.1332, 50000d, "1.000");
+        bloqueada.setBloqueaEnvio(true);
+        when(geocercaRepository.findActivasConPuntos()).thenReturn(List.of(
+                bloqueada,
+                circulo(2L, "Zona de entrega", DESTINO_LAT, DESTINO_LNG, 5000d, "1.000")));
+
+        assertThat(envioService.cotizar(7L).getTarifa()).isEqualByComparingTo("300.00");
     }
 
     @Test

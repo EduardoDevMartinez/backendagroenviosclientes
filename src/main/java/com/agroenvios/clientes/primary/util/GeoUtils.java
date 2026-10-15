@@ -53,4 +53,29 @@ public final class GeoUtils {
 
         return dentro;
     }
+
+    /**
+     * Área aproximada del polígono en m² (fórmula del topógrafo sobre una proyección plana
+     * local). Sobra precisión para comparar geocercas de una ciudad entre sí.
+     */
+    public static double areaPoligonoM2(List<GeocercaPunto> vertices) {
+        if (vertices == null || vertices.size() < 3) {
+            return 0;
+        }
+
+        double latMedia = vertices.stream().mapToDouble(GeocercaPunto::getLatitud).average().orElse(0);
+        double metrosPorGradoLat = Math.toRadians(1) * RADIO_TIERRA_METROS;
+        double metrosPorGradoLng = metrosPorGradoLat * Math.cos(Math.toRadians(latMedia));
+
+        double suma = 0;
+        int n = vertices.size();
+        for (int i = 0, j = n - 1; i < n; j = i++) {
+            double xi = vertices.get(i).getLongitud() * metrosPorGradoLng;
+            double yi = vertices.get(i).getLatitud() * metrosPorGradoLat;
+            double xj = vertices.get(j).getLongitud() * metrosPorGradoLng;
+            double yj = vertices.get(j).getLatitud() * metrosPorGradoLat;
+            suma += xj * yi - xi * yj;
+        }
+        return Math.abs(suma) / 2;
+    }
 }
