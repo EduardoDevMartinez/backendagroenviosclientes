@@ -30,4 +30,8 @@ public class TradeShop {
     // sus productos en el catálogo. Nulo cuenta como abierto.
     @Column(name = "is_open")
     private Boolean isOpen;
+
+    // Horario con los días de descanso (tabla day_schedules). Nulo = sin días de descanso.
+    @Column(name = "schedule_id")
+    private Integer scheduleId;
 }

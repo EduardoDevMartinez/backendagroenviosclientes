@@ -10,6 +10,7 @@ import com.agroenvios.clientes.secondary.model.Product;
 import com.agroenvios.clientes.secondary.repository.CategoryProductRepository;
 import com.agroenvios.clientes.secondary.repository.ProductRepository;
 import com.agroenvios.clientes.secondary.repository.ProductUnitRepository;
+import com.agroenvios.clientes.secondary.util.DiasDescanso;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -65,7 +66,7 @@ public class ProductService {
     }
 
     public List<ProductResponseDTO> getAvailable() {
-        return productRepository.findInStock().stream().map(this::toDTO).toList();
+        return productRepository.findInStock(DiasDescanso.diaDeManana()).stream().map(this::toDTO).toList();
     }
 
     public ProductResponseDTO getById(Integer id) {
@@ -75,7 +76,7 @@ public class ProductService {
     }
 
     public List<ProductResponseDTO> getByCategory(Integer categoryId) {
-        return productRepository.findInStockByCategoryId(categoryId)
+        return productRepository.findInStockByCategoryId(categoryId, DiasDescanso.diaDeManana())
                 .stream().map(this::toDTO).toList();
     }
 
@@ -153,7 +154,7 @@ public class ProductService {
         long ahora = System.currentTimeMillis();
         Candidatos guardado = candidatosCache.get(clave);
         if (guardado != null && guardado.expiraEn() > ahora) return guardado.filas();
-        List<Object[]> filas = productRepository.findAvailableForSearch(categoryId);
+        List<Object[]> filas = productRepository.findAvailableForSearch(categoryId, DiasDescanso.diaDeManana());
         candidatosCache.put(clave, new Candidatos(ahora + CANDIDATOS_TTL_MS, filas));
         return filas;
     }
@@ -233,7 +234,7 @@ public class ProductService {
 
     /** Comercios con productos visibles, con su logo y cuántos productos tienen. */
     public List<ShopOptionDTO> getAvailableShops() {
-        return productRepository.countAvailableByShop().stream()
+        return productRepository.countAvailableByShop(DiasDescanso.diaDeManana()).stream()
                 .map(r -> {
                     String logoKey = (String) r[2];
                     String logoUrl = logoKey == null || logoKey.isBlank()
@@ -246,7 +247,7 @@ public class ProductService {
     }
 
     public List<CategoryOptionDTO> getAvailableCategories() {
-        return productRepository.countAvailableByCategory().stream()
+        return productRepository.countAvailableByCategory(DiasDescanso.diaDeManana()).stream()
                 .map(r -> new CategoryOptionDTO(((Number) r[0]).intValue(), (String) r[1], ((Number) r[2]).longValue()))
                 .toList();
     }

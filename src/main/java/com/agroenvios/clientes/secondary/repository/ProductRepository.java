@@ -22,22 +22,30 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
     List<Product> findByActiveTrue();
 
     @Query("SELECT p FROM Product p LEFT JOIN p.tradeShop t WHERE p.active = true AND p.available = true AND p.stockAvailable > 0 " +
-            "AND (t IS NULL OR t.isOpen IS NULL OR t.isOpen = true)")
-    List<Product> findInStock();
+            "AND (t IS NULL OR t.isOpen IS NULL OR t.isOpen = true) " +
+            "AND (t IS NULL OR t.scheduleId IS NULL OR NOT EXISTS (SELECT d.id FROM TradeShopDay d " +
+            "WHERE d.scheduleId = t.scheduleId AND d.day = :manana AND d.isOpen = false))")
+    List<Product> findInStock(@Param("manana") String manana);
 
     @Query("SELECT p FROM Product p LEFT JOIN p.tradeShop t WHERE p.active = true AND p.available = true AND p.stockAvailable > 0 " +
             "AND (t IS NULL OR t.isOpen IS NULL OR t.isOpen = true) " +
+            "AND (t IS NULL OR t.scheduleId IS NULL OR NOT EXISTS (SELECT d.id FROM TradeShopDay d " +
+            "WHERE d.scheduleId = t.scheduleId AND d.day = :manana AND d.isOpen = false)) " +
             "AND p.category.id = :categoryId")
-    List<Product> findInStockByCategoryId(@Param("categoryId") Integer categoryId);
+    List<Product> findInStockByCategoryId(@Param("categoryId") Integer categoryId,
+                                           @Param("manana") String manana);
 
     List<Product> findByActiveTrueAndNameContainingIgnoreCase(String name);
 
     @Query("SELECT p FROM Product p LEFT JOIN p.tradeShop t WHERE p.active = true AND p.available = true AND p.stockAvailable > 0 " +
             "AND (t IS NULL OR t.isOpen IS NULL OR t.isOpen = true) " +
+            "AND (t IS NULL OR t.scheduleId IS NULL OR NOT EXISTS (SELECT d.id FROM TradeShopDay d " +
+            "WHERE d.scheduleId = t.scheduleId AND d.day = :manana AND d.isOpen = false)) " +
             "AND (:categoryId IS NULL OR p.category.id = :categoryId) " +
             "AND (:search IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<Product> findAvailablePaged(@Param("categoryId") Integer categoryId,
                                       @Param("search") String search,
+                                      @Param("manana") String manana,
                                       Pageable pageable);
 
     /**
@@ -49,23 +57,30 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
             "LEFT JOIN p.tradeShop t LEFT JOIN p.category c " +
             "WHERE p.active = true AND p.available = true AND p.stockAvailable > 0 " +
             "AND (t IS NULL OR t.isOpen IS NULL OR t.isOpen = true) " +
+            "AND (t IS NULL OR t.scheduleId IS NULL OR NOT EXISTS (SELECT d.id FROM TradeShopDay d " +
+            "WHERE d.scheduleId = t.scheduleId AND d.day = :manana AND d.isOpen = false)) " +
             "AND (:categoryId IS NULL OR c.id = :categoryId)")
-    List<Object[]> findAvailableForSearch(@Param("categoryId") Integer categoryId);
+    List<Object[]> findAvailableForSearch(@Param("categoryId") Integer categoryId,
+                                           @Param("manana") String manana);
 
     /** Categorías con al menos un producto visible en el catálogo y cuántos tienen, de más a menos. */
     @Query("SELECT c.id, c.name, COUNT(p) FROM Product p " +
             "LEFT JOIN p.tradeShop t JOIN p.category c " +
             "WHERE p.active = true AND p.available = true AND p.stockAvailable > 0 " +
             "AND (t IS NULL OR t.isOpen IS NULL OR t.isOpen = true) " +
+            "AND (t IS NULL OR t.scheduleId IS NULL OR NOT EXISTS (SELECT d.id FROM TradeShopDay d " +
+            "WHERE d.scheduleId = t.scheduleId AND d.day = :manana AND d.isOpen = false)) " +
             "AND c.active = true " +
             "GROUP BY c.id, c.name ORDER BY COUNT(p) DESC, c.name ASC")
-    List<Object[]> countAvailableByCategory();
+    List<Object[]> countAvailableByCategory(@Param("manana") String manana);
 
     /** Comercios con al menos un producto visible en el catálogo y cuántos tienen, de más a menos. */
     @Query("SELECT t.id, t.nombreNegocio, t.imageKey, COUNT(p) FROM Product p " +
             "JOIN p.tradeShop t " +
             "WHERE p.active = true AND p.available = true AND p.stockAvailable > 0 " +
             "AND (t.isOpen IS NULL OR t.isOpen = true) " +
+            "AND (t.scheduleId IS NULL OR NOT EXISTS (SELECT d.id FROM TradeShopDay d " +
+            "WHERE d.scheduleId = t.scheduleId AND d.day = :manana AND d.isOpen = false)) " +
             "GROUP BY t.id, t.nombreNegocio, t.imageKey ORDER BY COUNT(p) DESC, t.nombreNegocio ASC")
-    List<Object[]> countAvailableByShop();
+    List<Object[]> countAvailableByShop(@Param("manana") String manana);
 }

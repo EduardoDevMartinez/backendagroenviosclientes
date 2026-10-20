@@ -9,7 +9,10 @@ import com.agroenvios.clientes.primary.model.User;
 import com.agroenvios.clientes.primary.repository.PagoPendienteRepository;
 import com.agroenvios.clientes.primary.repository.UserRepository;
 import com.agroenvios.clientes.secondary.model.Product;
+import com.agroenvios.clientes.secondary.model.TradeShop;
 import com.agroenvios.clientes.secondary.repository.ProductRepository;
+import com.agroenvios.clientes.secondary.repository.TradeShopDayRepository;
+import com.agroenvios.clientes.secondary.util.DiasDescanso;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -78,6 +81,7 @@ public class MercadoPagoService {
     private final ObjectMapper objectMapper;
     private final EnvioService envioService;
     private final ProductRepository productRepository;
+    private final TradeShopDayRepository tradeShopDayRepository;
 
     public PreferenciaResponse crearPreferencia(PreferenciaRequest request) {
         if (accessToken == null || accessToken.isBlank()) {
@@ -351,7 +355,8 @@ public class MercadoPagoService {
             boolean visible = producto != null
                     && !Boolean.FALSE.equals(producto.getActive())
                     && !Boolean.FALSE.equals(producto.getAvailable())
-                    && (producto.getTradeShop() == null || !Boolean.FALSE.equals(producto.getTradeShop().getIsOpen()));
+                    && (producto.getTradeShop() == null || !Boolean.FALSE.equals(producto.getTradeShop().getIsOpen()))
+                    && !descansaManana(producto.getTradeShop());
             if (!visible) {
                 problemas.add(nombre + " (ya no está disponible)");
             } else if (stock <= 0) {
@@ -367,6 +372,17 @@ public class MercadoPagoService {
                     "Algunos productos ya no tienen stock suficiente: " + String.join(", ", problemas)
                             + ". Ajusta tu carrito e intenta de nuevo.");
         }
+    }
+
+    /**
+     * Mismo criterio del catálogo: si el comercio descansa mañana, hoy ya no se le pueden hacer
+     * pedidos (se entregarían ese día), aunque el producto siga en un carrito armado antes.
+     */
+    private boolean descansaManana(TradeShop comercio) {
+        return comercio != null
+                && comercio.getScheduleId() != null
+                && tradeShopDayRepository.existsByScheduleIdAndDayAndIsOpenFalse(
+                        comercio.getScheduleId(), DiasDescanso.diaDeManana());
     }
 
     private Map<String, Object> toMpItem(ItemPagoDto item) {

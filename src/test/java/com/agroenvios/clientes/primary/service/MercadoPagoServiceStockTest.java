@@ -4,7 +4,9 @@ import com.agroenvios.clientes.primary.dto.pago.ItemPagoDto;
 import com.agroenvios.clientes.primary.repository.PagoPendienteRepository;
 import com.agroenvios.clientes.primary.repository.UserRepository;
 import com.agroenvios.clientes.secondary.model.Product;
+import com.agroenvios.clientes.secondary.model.TradeShop;
 import com.agroenvios.clientes.secondary.repository.ProductRepository;
+import com.agroenvios.clientes.secondary.repository.TradeShopDayRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,6 +23,8 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 /**
@@ -36,6 +40,7 @@ class MercadoPagoServiceStockTest {
     @Mock ObjectMapper objectMapper;
     @Mock EnvioService envioService;
     @Mock ProductRepository productRepository;
+    @Mock TradeShopDayRepository tradeShopDayRepository;
 
     @InjectMocks MercadoPagoService service;
 
@@ -133,6 +138,33 @@ class MercadoPagoServiceStockTest {
         assertTrue(error.getReason().contains("Cargador (solo quedan 1)"), error.getReason());
         assertTrue(error.getReason().contains("Florero (agotado)"), error.getReason());
         assertFalse(error.getReason().contains("Humidificador"), error.getReason());
+    }
+
+    @Test
+    void comercioQueDescansaMananaRechazaElPedidoDeHoy() {
+        Product conDescanso = producto(11, "Cargador", 9, true, true);
+        TradeShop comercio = new TradeShop();
+        comercio.setScheduleId(5);
+        conDescanso.setTradeShop(comercio);
+        catalogo(conDescanso);
+        when(tradeShopDayRepository.existsByScheduleIdAndDayAndIsOpenFalse(eq(5), anyString())).thenReturn(true);
+
+        ResponseStatusException error = assertThrows(ResponseStatusException.class,
+                () -> service.validarStock(List.of(item(11L, "Cargador", 1))));
+
+        assertTrue(error.getReason().contains("Cargador (ya no está disponible)"), error.getReason());
+    }
+
+    @Test
+    void comercioConHorarioSinDescansoMananaSiPermitePedir() {
+        Product normal = producto(11, "Cargador", 9, true, true);
+        TradeShop comercio = new TradeShop();
+        comercio.setScheduleId(5);
+        normal.setTradeShop(comercio);
+        catalogo(normal);
+        when(tradeShopDayRepository.existsByScheduleIdAndDayAndIsOpenFalse(eq(5), anyString())).thenReturn(false);
+
+        assertDoesNotThrow(() -> service.validarStock(List.of(item(11L, "Cargador", 1))));
     }
 
     @Test
