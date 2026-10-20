@@ -21,4 +21,6 @@ public class ResponseUser {
     private Boolean isEmailVerified;
     private Boolean isTelefonoVerified;
     private Boolean isActive;
+    // El cliente paga precio de mayoreo en todo lo que lo tenga, sin mínimo de cantidad
+    private Boolean mayoreoFijo;
 }

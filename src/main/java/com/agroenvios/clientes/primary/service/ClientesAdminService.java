@@ -15,7 +15,7 @@ import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/** Directorio de clientes para el panel admin de proveedores (solo lectura). */
+/** Directorio de clientes para el panel admin de proveedores. Solo se puede cambiar el mayoreo fijo. */
 @Service
 @RequiredArgsConstructor
 public class ClientesAdminService {
@@ -45,6 +45,7 @@ public class ClientesAdminService {
                             .correoVerificado(u.getIsEmailVerified())
                             .telefonoVerificado(u.getIsTelefonoVerified())
                             .activo(u.getIsActive())
+                            .mayoreoFijo(Boolean.TRUE.equals(u.getMayoreoFijo()))
                             .createdAt(u.getCreatedAt())
                             .totalPedidos(pedidos.size())
                             .pedidosAprobados(aprobados.size())
@@ -77,6 +78,7 @@ public class ClientesAdminService {
                             .correoVerificado(u.getIsEmailVerified())
                             .telefonoVerificado(u.getIsTelefonoVerified())
                             .activo(u.getIsActive())
+                            .mayoreoFijo(Boolean.TRUE.equals(u.getMayoreoFijo()))
                             .createdAt(u.getCreatedAt())
                             .totalPedidos(pedidos.size())
                             .pedidosAprobados(aprobados.size())
@@ -104,6 +106,21 @@ public class ClientesAdminService {
                                             .build())
                                     .collect(Collectors.toList()))
                             .build();
+                });
+    }
+
+    /** Activa o quita el mayoreo fijo de un cliente. Vacío si el cliente no existe. */
+    @Transactional
+    public Optional<Boolean> actualizarMayoreoFijo(Long clienteId, boolean mayoreoFijo) {
+        // UserRepository está tipado con Integer pero el id es Long: igual que detalle(), se busca
+        // en la lista en vez de findById.
+        return userRepository.findAll().stream()
+                .filter(u -> clienteId.equals(u.getId()))
+                .findFirst()
+                .map(u -> {
+                    u.setMayoreoFijo(mayoreoFijo);
+                    userRepository.save(u);
+                    return mayoreoFijo;
                 });
     }
 

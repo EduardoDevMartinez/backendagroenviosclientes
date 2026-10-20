@@ -28,6 +28,7 @@ public final class ClienteAdminDtos {
         private Boolean correoVerificado;
         private Boolean telefonoVerificado;
         private Boolean activo;
+        private Boolean mayoreoFijo;
         private LocalDateTime createdAt;
         private int totalPedidos;
         private int pedidosAprobados;
@@ -79,6 +80,7 @@ public final class ClienteAdminDtos {
         private Boolean correoVerificado;
         private Boolean telefonoVerificado;
         private Boolean activo;
+        private Boolean mayoreoFijo;
         private LocalDateTime createdAt;
         private int totalPedidos;
         private int pedidosAprobados;

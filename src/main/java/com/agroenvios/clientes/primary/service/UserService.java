@@ -35,6 +35,7 @@ public class UserService {
                 .isEmailVerified(user.getIsEmailVerified())
                 .isTelefonoVerified(user.getIsTelefonoVerified())
                 .isActive(user.getIsActive())
+                .mayoreoFijo(Boolean.TRUE.equals(user.getMayoreoFijo()))
                 .build();
     }
 

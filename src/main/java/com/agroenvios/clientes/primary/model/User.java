@@ -64,6 +64,13 @@ public class User extends BaseEntity implements UserDetails{
     @Builder.Default
     private Boolean isActive = false;
 
+    /**
+     * Mayoreo fijo (lo activa el admin): el cliente ve y paga el precio de mayoreo en todos los
+     * productos que lo tengan, sin importar la cantidad. Nulo cuenta como desactivado (la columna
+     * la agrega hbm2ddl sin valor en los clientes existentes).
+     */
+    private Boolean mayoreoFijo;
+
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

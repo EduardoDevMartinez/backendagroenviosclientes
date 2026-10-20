@@ -37,6 +37,21 @@ public class ClientesInternalController {
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
 
+    /** Activa o quita el mayoreo fijo del cliente. Cuerpo: {"mayoreoFijo": true}. */
+    @PutMapping("/{clienteId}/mayoreo-fijo")
+    public ResponseEntity<?> mayoreoFijo(@PathVariable Long clienteId,
+                                         @RequestBody MayoreoFijoRequest request,
+                                         @RequestHeader(value = "X-Internal-Api-Key", required = false) String apiKey) {
+        if (!autorizado(apiKey)) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        if (request == null || request.mayoreoFijo() == null) return ResponseEntity.badRequest().build();
+        return clientesAdminService.actualizarMayoreoFijo(clienteId, request.mayoreoFijo())
+                .<ResponseEntity<?>>map(valor -> ResponseEntity.ok(java.util.Map.of("mayoreoFijo", valor)))
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+    }
+
+    public record MayoreoFijoRequest(Boolean mayoreoFijo) {
+    }
+
     private boolean autorizado(String apiKey) {
         return internalApiKey != null && !internalApiKey.isBlank() && internalApiKey.equals(apiKey);
     }
