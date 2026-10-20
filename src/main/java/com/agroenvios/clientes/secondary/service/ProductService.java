@@ -169,13 +169,15 @@ public class ProductService {
     }
 
     /**
-     * -1 si no coincide. Todas las palabras deben aparecer en nombre, comercio o categoría
-     * (sin acentos ni mayúsculas). Menor es mejor: 0 empieza con la palabra, 1 una palabra del
-     * nombre empieza con ella, 2 está dentro del nombre, 3 solo coincide por comercio/categoría.
+     * -1 si no coincide. Todas las palabras deben aparecer en nombre, comercio, categoría o
+     * descripción (sin acentos ni mayúsculas). Menor es mejor: 0 empieza con la palabra, 1 una
+     * palabra del nombre empieza con ella, 2 está dentro del nombre, 3 solo coincide por
+     * comercio/categoría, 4 solo coincide por la descripción.
      */
     private static int searchScore(Object[] row, List<String> tokens) {
         String name = normalize((String) row[2]);
         String other = normalize((String) row[3]) + " " + normalize((String) row[4]);
+        String description = row.length > 5 ? normalize((String) row[5]) : "";
         int worst = 0;
         for (String token : tokens) {
             int score;
@@ -183,6 +185,7 @@ public class ProductService {
             else if (name.contains(" " + token)) score = 1;
             else if (name.contains(token)) score = 2;
             else if (other.contains(token)) score = 3;
+            else if (description.contains(token)) score = 4;
             else return -1;
             worst = Math.max(worst, score);
         }

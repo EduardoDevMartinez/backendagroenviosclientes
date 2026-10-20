@@ -42,10 +42,10 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
 
     /**
      * Misma regla de catálogo que findAvailablePaged pero sin paginar ni filtrar por texto:
-     * devuelve (id, tradeShopId, nombre, comercio, categoría) para que el servicio ordene y
+     * devuelve (id, tradeShopId, nombre, comercio, categoría, descripción) para que el servicio ordene y
      * busque por palabras sin acentos.
      */
-    @Query("SELECT p.id, p.tradeShopId, p.name, t.nombreNegocio, c.name FROM Product p " +
+    @Query("SELECT p.id, p.tradeShopId, p.name, t.nombreNegocio, c.name, p.description FROM Product p " +
             "LEFT JOIN p.tradeShop t LEFT JOIN p.category c " +
             "WHERE p.active = true AND p.available = true AND p.stockAvailable > 0 " +
             "AND (t IS NULL OR t.isOpen IS NULL OR t.isOpen = true) " +
