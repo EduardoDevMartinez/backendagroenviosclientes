@@ -60,4 +60,12 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
             "AND c.active = true " +
             "GROUP BY c.id, c.name ORDER BY COUNT(p) DESC, c.name ASC")
     List<Object[]> countAvailableByCategory();
+
+    /** Comercios con al menos un producto visible en el catálogo y cuántos tienen, de más a menos. */
+    @Query("SELECT t.id, t.nombreNegocio, t.imageKey, COUNT(p) FROM Product p " +
+            "JOIN p.tradeShop t " +
+            "WHERE p.active = true AND p.available = true AND p.stockAvailable > 0 " +
+            "AND (t.isOpen IS NULL OR t.isOpen = true) " +
+            "GROUP BY t.id, t.nombreNegocio, t.imageKey ORDER BY COUNT(p) DESC, t.nombreNegocio ASC")
+    List<Object[]> countAvailableByShop();
 }

@@ -5,6 +5,7 @@ import com.agroenvios.clientes.secondary.dto.CategoryOptionDTO;
 import com.agroenvios.clientes.secondary.dto.ProductPageDTO;
 import com.agroenvios.clientes.secondary.dto.ProductResponseDTO;
 import com.agroenvios.clientes.secondary.dto.ProductUnitDTO;
+import com.agroenvios.clientes.secondary.dto.ShopOptionDTO;
 import com.agroenvios.clientes.secondary.model.Product;
 import com.agroenvios.clientes.secondary.repository.CategoryProductRepository;
 import com.agroenvios.clientes.secondary.repository.ProductRepository;
@@ -88,7 +89,7 @@ public class ProductService {
      * para scroll infinito, con filtro opcional de categoría y búsqueda por nombre resueltos
      * del lado del servidor.
      */
-    public ProductPageDTO getAvailablePaged(Integer categoryId, String search, int page, int size, Long seed) {
+    public ProductPageDTO getAvailablePaged(Integer categoryId, Long shopId, String search, int page, int size, Long seed) {
         String normalizedSearch = (search == null || search.isBlank()) ? null : search.trim();
 
         // Orden intercalado: se mezclan los productos de cada comercio y se reparten en
@@ -96,6 +97,11 @@ public class ProductService {
         // no muestre todos los de un comercio seguidos. La semilla mantiene estable el
         // orden entre páginas de una misma sesión y lo cambia al refrescar.
         List<Object[]> rows = candidatosCatalogo(categoryId);
+        if (shopId != null) {
+            rows = rows.stream()
+                    .filter(r -> r[1] != null && ((Number) r[1]).longValue() == shopId)
+                    .toList();
+        }
         List<String> tokens = normalizedSearch == null ? List.of() : tokenize(normalizedSearch);
         java.util.Map<Integer, Integer> rank = new java.util.HashMap<>();
         if (!tokens.isEmpty()) {
@@ -220,6 +226,20 @@ public class ProductService {
             log.warn("No se pudieron leer las unidades de producto: {}", e.getMessage());
             return List.of();
         }
+    }
+
+    /** Comercios con productos visibles, con su logo y cuántos productos tienen. */
+    public List<ShopOptionDTO> getAvailableShops() {
+        return productRepository.countAvailableByShop().stream()
+                .map(r -> {
+                    String logoKey = (String) r[2];
+                    String logoUrl = logoKey == null || logoKey.isBlank()
+                            ? null
+                            : minioService.generatePresignedUrl(logoKey, proveedoresBucket);
+                    return new ShopOptionDTO(((Number) r[0]).longValue(), (String) r[1], logoUrl,
+                            ((Number) r[3]).longValue());
+                })
+                .toList();
     }
 
     public List<CategoryOptionDTO> getAvailableCategories() {

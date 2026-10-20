@@ -4,6 +4,7 @@ import com.agroenvios.clientes.secondary.dto.CategoryOptionDTO;
 import com.agroenvios.clientes.secondary.dto.ProductPageDTO;
 import com.agroenvios.clientes.secondary.dto.ProductResponseDTO;
 import com.agroenvios.clientes.secondary.dto.ProductUnitDTO;
+import com.agroenvios.clientes.secondary.dto.ShopOptionDTO;
 import com.agroenvios.clientes.secondary.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -32,14 +33,21 @@ public class ProductController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "18") int size,
             @RequestParam(required = false) Integer categoryId,
+            @RequestParam(required = false) Long shopId,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Long seed) {
-        return ResponseEntity.ok(productService.getAvailablePaged(categoryId, search, page, size, seed));
+        return ResponseEntity.ok(productService.getAvailablePaged(categoryId, shopId, search, page, size, seed));
     }
 
     @GetMapping("/categories")
     public ResponseEntity<List<CategoryOptionDTO>> getAvailableCategories() {
         return ResponseEntity.ok(productService.getAvailableCategories());
+    }
+
+    /** Comercios con productos visibles, para el filtro por comercio. */
+    @GetMapping("/shops")
+    public ResponseEntity<List<ShopOptionDTO>> getAvailableShops() {
+        return ResponseEntity.ok(productService.getAvailableShops());
     }
 
     /** Unidades de venta con su incremento (kg de 0.5 en 0.5, g de 50 en 50...). */
