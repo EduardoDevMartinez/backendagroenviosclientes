@@ -26,13 +26,17 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.security.SecureRandom;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @Slf4j
@@ -40,6 +44,7 @@ import java.util.stream.Collectors;
 public class PedidoService {
 
     private static final int MAX_PAGE_SIZE_PEDIDOS = 50;
+    private static final DateTimeFormatter FORMATO_FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final PedidoRepository pedidoRepository;
     private final PagoPendienteRepository pagoPendienteRepository;
@@ -50,6 +55,7 @@ public class PedidoService {
     private final ExpoPushNotificationService pushNotificationService;
     private final ExternalOrderBridgeService externalOrderBridgeService;
     private final MercadoPagoService mercadoPagoService;
+    private final EmailService emailService;
 
     @Value("${aws.s3.proveedores-bucket:agroenvios-files}")
     private String proveedoresBucket;
@@ -225,6 +231,81 @@ public class PedidoService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido no encontrado"));
 
         return PedidoResponse.from(pedido, resolveTradeShopInfo(List.of(pedido)));
+    }
+
+    /**
+     * El cliente pide su factura por correo: se avisa a cada comercio del pedido con sus
+     * productos y el correo del cliente como Reply-To. Solo una vez por pedido y hasta el
+     * último día del mes de la compra (el mismo criterio que usa la app para mostrar el botón).
+     */
+    @Transactional
+    public PedidoResponse solicitarFactura(Long pedidoId, String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
+
+        Pedido pedido = pedidoRepository.findByIdAndUserId(pedidoId, user.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido no encontrado"));
+
+        if (pedido.getFacturaSolicitadaAt() != null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya solicitaste la factura de este pedido");
+        }
+        if (!PedidoResponse.puedeSolicitarFactura(pedido)) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                    "La factura de este pedido ya no se puede solicitar (vencía el "
+                            + PedidoResponse.limiteFactura(pedido) + ")");
+        }
+
+        Map<Long, PedidoResponse.TradeShopInfo> tiendas = resolveTradeShopInfo(List.of(pedido));
+        Map<Long, List<PedidoItem>> itemsPorComercio = pedido.getItems().stream()
+                .filter(item -> item.getTradeShopId() != null)
+                .collect(Collectors.groupingBy(PedidoItem::getTradeShopId));
+
+        // Primero se resuelven todos los correos: si algún comercio no tiene contacto no se
+        // manda nada a medias y el cliente puede reintentar cuando se arregle.
+        Map<Long, String> correos = new HashMap<>();
+        for (Long tradeShopId : itemsPorComercio.keySet()) {
+            tradeShopRepository.findCorreoContacto(tradeShopId).stream().findFirst()
+                    .ifPresent(correo -> correos.put(tradeShopId, correo));
+        }
+        if (itemsPorComercio.isEmpty() || correos.size() < itemsPorComercio.size()) {
+            log.warn("Pedido {}: sin correo de contacto para algún comercio (comercios={}, con correo={})",
+                    pedidoId, itemsPorComercio.keySet(), correos.keySet());
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                    "No pudimos localizar el correo del comercio. Intenta más tarde o contacta a soporte");
+        }
+
+        String nombreCliente = Stream.of(user.getNombre(), user.getPaterno(), user.getMaterno())
+                .filter(Objects::nonNull).map(String::trim).filter(s -> !s.isEmpty())
+                .collect(Collectors.joining(" "));
+        String fechaPedido = pedido.getCreatedAt().format(FORMATO_FECHA);
+        String fechaLimite = PedidoResponse.limiteFactura(pedido).format(FORMATO_FECHA);
+
+        itemsPorComercio.forEach((tradeShopId, items) -> {
+            PedidoResponse.TradeShopInfo tienda = tiendas.get(tradeShopId);
+            BigDecimal total = items.stream()
+                    .map(i -> i.getPrecioUnitario().multiply(BigDecimal.valueOf(i.getCantidad())))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            List<EmailService.LineaFactura> lineas = items.stream()
+                    .map(i -> new EmailService.LineaFactura(
+                            i.getNombre(),
+                            BigDecimal.valueOf(i.getCantidad()).stripTrailingZeros().toPlainString(),
+                            moneda(i.getPrecioUnitario().multiply(BigDecimal.valueOf(i.getCantidad())))))
+                    .toList();
+            emailService.sendInvoiceRequestEmail(correos.get(tradeShopId),
+                    tienda != null && tienda.nombre() != null ? tienda.nombre() : "Comercio",
+                    pedido.getId(), fechaPedido, nombreCliente, user.getCorreo(), user.getTelefono(),
+                    lineas, moneda(total), fechaLimite);
+        });
+
+        pedido.setFacturaSolicitadaAt(LocalDateTime.now());
+        pedidoRepository.save(pedido);
+        log.info("Pedido id={}: factura solicitada a {} comercio(s)", pedidoId, itemsPorComercio.size());
+
+        return PedidoResponse.from(pedido, tiendas);
+    }
+
+    private static String moneda(BigDecimal valor) {
+        return "$" + String.format(Locale.US, "%,.2f", valor);
     }
 
     // Un solo findAllById para todos los tradeShopId distintos de todos los items,

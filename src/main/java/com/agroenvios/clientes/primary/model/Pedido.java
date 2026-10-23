@@ -63,6 +63,11 @@ public class Pedido extends BaseEntity {
     @Column(name = "codigo_entrega", nullable = false, length = 4)
     private String codigoEntrega;
 
+    // Cuándo pidió el cliente su factura por correo a los comercios. Null = no la ha pedido.
+    // Solo se puede pedir una vez y hasta el último día del mes de la compra.
+    @Column(name = "factura_solicitada_at")
+    private LocalDateTime facturaSolicitadaAt;
+
     // Seguimiento de la réplica hacia proveedores (ExternalOrderBridgeService). Null en
     // replicadoProveedoresAt = todavía no se confirmó que proveedores tenga el pedido; con
     // eso, ReplicacionPedidosService lo reintenta solo. Las columnas se crean solas

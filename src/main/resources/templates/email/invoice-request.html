@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solicitud de factura - AgroEnvíos</title>
+</head>
+<body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #2D2D2D; margin: 0; padding: 0; background-color: #f8f8f8;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f8f8f8; padding: 40px 20px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+
+                    <!-- Header -->
+                    <tr>
+                        <td style="background-color: #ffffff; padding: 40px 30px; text-align: center; border-bottom: 4px solid #E63946;">
+                            <img src="cid:logo" alt="AgroEnvíos" style="max-width: 100px; margin-bottom: 20px;">
+                            <h1 style="color: #E63946; margin: 0; font-size: 28px; font-weight: 600;">Solicitud de factura</h1>
+                        </td>
+                    </tr>
+
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 45px 40px;">
+                            <p style="margin: 0 0 20px 0; font-size: 18px; color: #2D2D2D;">
+                                Hola <strong th:text="${comercio}" style="color: #E63946;">Comercio</strong>,
+                            </p>
+                            <p style="margin: 0 0 25px 0; font-size: 16px; color: #555;">
+                                Un cliente solicita la factura del <strong>pedido #<span th:text="${pedidoId}">0</span></strong>
+                                realizado el <span th:text="${fechaPedido}">fecha</span>.
+                            </p>
+
+                            <!-- Cliente -->
+                            <p style="margin: 0 0 8px 0; font-size: 15px; font-weight: 600; color: #2D2D2D;">Datos del cliente</p>
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #fafafa; border-radius: 8px; margin-bottom: 25px;">
+                                <tr>
+                                    <td style="padding: 15px 20px; font-size: 14px; color: #555;">
+                                        <strong>Nombre:</strong> <span th:text="${clienteNombre}">Nombre</span><br>
+                                        <strong>Correo:</strong> <span th:text="${clienteCorreo}">correo</span><br>
+                                        <strong>Teléfono:</strong> <span th:text="${clienteTelefono ?: 'No registrado'}">teléfono</span>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Productos -->
+                            <p style="margin: 0 0 8px 0; font-size: 15px; font-weight: 600; color: #2D2D2D;">Productos de tu comercio en este pedido</p>
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom: 10px;">
+                                <tr th:each="linea : ${lineas}">
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; color: #555;">
+                                        <span th:text="${linea.nombre}">Producto</span>
+                                        <span style="color: #999;"> × <span th:text="${linea.cantidad}">1</span></span>
+                                    </td>
+                                    <td align="right" style="padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; color: #2D2D2D;" th:text="${linea.subtotal}">$0.00</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px 0; font-size: 15px; font-weight: 600; color: #2D2D2D;">Total</td>
+                                    <td align="right" style="padding: 10px 0; font-size: 15px; font-weight: 600; color: #E63946;" th:text="${totalComercio}">$0.00</td>
+                                </tr>
+                            </table>
+
+                            <p style="margin: 25px 0 0 0; font-size: 16px; color: #555;">
+                                Responde a este correo: te llegará directo al cliente para que coordinen sus datos fiscales.
+                            </p>
+                            <p style="margin: 15px 0 0 0; font-size: 14px; color: #888;">
+                                El cliente podía solicitar su factura hasta el <strong th:text="${fechaLimite}">fecha límite</strong>.
+                            </p>
+
+                            <p style="margin: 30px 0 0 0; font-size: 16px; color: #2D2D2D;">
+                                Saludos,<br>
+                                <strong style="color: #E63946;">El equipo de AgroEnvíos</strong>
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #fafafa; padding: 25px 40px; border-top: 1px solid #eee;">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                                <tr>
+                                    <td align="center">
+                                        <p style="margin: 0; font-size: 12px; color: #999;">
+                                            © 2025 <span style="color: #E63946; font-weight: 600;">AgroEnvíos</span> - Todos los derechos reservados
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

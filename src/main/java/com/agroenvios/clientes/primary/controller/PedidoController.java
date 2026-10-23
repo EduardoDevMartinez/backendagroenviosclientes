@@ -51,6 +51,13 @@ public class PedidoController {
         return ResponseEntity.ok(pedidoService.getPedidoById(id, userDetails.getUsername()));
     }
 
+    @PostMapping("/{id}/solicitar-factura")
+    public ResponseEntity<PedidoResponse> solicitarFactura(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(pedidoService.solicitarFactura(id, userDetails.getUsername()));
+    }
+
     /**
      * Recibe el cambio de estado de un pedido desde proveedores (comercio confirmó,
      * listo, en camino, entregado...). Llamada servidor-a-servidor, sin sesión de
