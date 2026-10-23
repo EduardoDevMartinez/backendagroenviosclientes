@@ -5,9 +5,11 @@ import com.agroenvios.clientes.primary.dto.pago.PedidoPageDTO;
 import com.agroenvios.clientes.primary.dto.pago.PedidoResponse;
 import com.agroenvios.clientes.primary.model.PagoPendiente;
 import com.agroenvios.clientes.primary.model.Pedido;
+import com.agroenvios.clientes.primary.model.PedidoFacturaSolicitud;
 import com.agroenvios.clientes.primary.model.PedidoItem;
 import com.agroenvios.clientes.primary.model.User;
 import com.agroenvios.clientes.primary.repository.PagoPendienteRepository;
+import com.agroenvios.clientes.primary.repository.PedidoFacturaSolicitudRepository;
 import com.agroenvios.clientes.primary.repository.PedidoRepository;
 import com.agroenvios.clientes.primary.repository.UserRepository;
 import com.agroenvios.clientes.secondary.model.TradeShop;
@@ -18,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Slice;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -56,6 +59,7 @@ public class PedidoService {
     private final ExternalOrderBridgeService externalOrderBridgeService;
     private final MercadoPagoService mercadoPagoService;
     private final EmailService emailService;
+    private final PedidoFacturaSolicitudRepository facturaSolicitudRepository;
 
     @Value("${aws.s3.proveedores-bucket:agroenvios-files}")
     private String proveedoresBucket;
@@ -169,9 +173,10 @@ public class PedidoService {
 
         List<Pedido> pedidos = pedidoRepository.findByUserIdOrderByCreatedAtDesc(userId);
         Map<Long, PedidoResponse.TradeShopInfo> tradeShopById = resolveTradeShopInfo(pedidos);
+        Map<Long, Map<Long, LocalDateTime>> facturas = resolverFacturas(pedidos);
 
         return pedidos.stream()
-                .map(pedido -> PedidoResponse.from(pedido, tradeShopById))
+                .map(pedido -> PedidoResponse.from(pedido, tradeShopById, facturas.getOrDefault(pedido.getId(), Map.of())))
                 .toList();
     }
 
@@ -204,9 +209,10 @@ public class PedidoService {
 
         List<Pedido> pedidos = slice.getContent();
         Map<Long, PedidoResponse.TradeShopInfo> tradeShopById = resolveTradeShopInfo(pedidos);
+        Map<Long, Map<Long, LocalDateTime>> facturas = resolverFacturas(pedidos);
 
         return PedidoPageDTO.builder()
-                .items(pedidos.stream().map(p -> PedidoResponse.from(p, tradeShopById)).toList())
+                .items(pedidos.stream().map(p -> PedidoResponse.from(p, tradeShopById, facturas.getOrDefault(p.getId(), Map.of()))).toList())
                 .hasMore(slice.hasNext())
                 .page(pagina)
                 .conteos(pagina == 0 ? conteosPorEstado(userId) : null)
@@ -230,24 +236,32 @@ public class PedidoService {
         Pedido pedido = pedidoRepository.findByIdAndUserId(pedidoId, userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido no encontrado"));
 
-        return PedidoResponse.from(pedido, resolveTradeShopInfo(List.of(pedido)));
+        return PedidoResponse.from(pedido, resolveTradeShopInfo(List.of(pedido)),
+                resolverFacturas(List.of(pedido)).getOrDefault(pedido.getId(), Map.of()));
     }
 
     /**
-     * El cliente pide su factura por correo: se avisa a cada comercio del pedido con sus
-     * productos y el correo del cliente como Reply-To. Solo una vez por pedido y hasta el
-     * último día del mes de la compra (el mismo criterio que usa la app para mostrar el botón).
+     * El cliente pide su factura por correo a un comercio de su pedido (cada comercio factura
+     * lo suyo): se le avisa con sus productos y el correo del cliente como Reply-To. Una vez
+     * por comercio y hasta el último día del mes de la compra (el mismo criterio que usa la
+     * app para mostrar el botón).
      */
     @Transactional
-    public PedidoResponse solicitarFactura(Long pedidoId, String username) {
+    public PedidoResponse solicitarFactura(Long pedidoId, Long tradeShopId, String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
 
         Pedido pedido = pedidoRepository.findByIdAndUserId(pedidoId, user.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido no encontrado"));
 
-        if (pedido.getFacturaSolicitadaAt() != null) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya solicitaste la factura de este pedido");
+        List<PedidoItem> items = pedido.getItems().stream()
+                .filter(item -> tradeShopId.equals(item.getTradeShopId()))
+                .toList();
+        if (items.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Ese comercio no es parte del pedido");
+        }
+        if (facturaSolicitudRepository.existsByPedidoIdAndTradeShopId(pedidoId, tradeShopId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya solicitaste la factura a este comercio");
         }
         if (!PedidoResponse.puedeSolicitarFactura(pedido)) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
@@ -255,53 +269,59 @@ public class PedidoService {
                             + PedidoResponse.limiteFactura(pedido) + ")");
         }
 
-        Map<Long, PedidoResponse.TradeShopInfo> tiendas = resolveTradeShopInfo(List.of(pedido));
-        Map<Long, List<PedidoItem>> itemsPorComercio = pedido.getItems().stream()
-                .filter(item -> item.getTradeShopId() != null)
-                .collect(Collectors.groupingBy(PedidoItem::getTradeShopId));
+        String correo = tradeShopRepository.findCorreoContacto(tradeShopId).stream().findFirst()
+                .orElseThrow(() -> {
+                    log.warn("Pedido {}: comercio {} sin correo de contacto para solicitud de factura", pedidoId, tradeShopId);
+                    return new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                            "No pudimos localizar el correo del comercio. Intenta más tarde o contacta a soporte");
+                });
 
-        // Primero se resuelven todos los correos: si algún comercio no tiene contacto no se
-        // manda nada a medias y el cliente puede reintentar cuando se arregle.
-        Map<Long, String> correos = new HashMap<>();
-        for (Long tradeShopId : itemsPorComercio.keySet()) {
-            tradeShopRepository.findCorreoContacto(tradeShopId).stream().findFirst()
-                    .ifPresent(correo -> correos.put(tradeShopId, correo));
-        }
-        if (itemsPorComercio.isEmpty() || correos.size() < itemsPorComercio.size()) {
-            log.warn("Pedido {}: sin correo de contacto para algún comercio (comercios={}, con correo={})",
-                    pedidoId, itemsPorComercio.keySet(), correos.keySet());
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
-                    "No pudimos localizar el correo del comercio. Intenta más tarde o contacta a soporte");
-        }
+        Map<Long, PedidoResponse.TradeShopInfo> tiendas = resolveTradeShopInfo(List.of(pedido));
+        PedidoResponse.TradeShopInfo tienda = tiendas.get(tradeShopId);
 
         String nombreCliente = Stream.of(user.getNombre(), user.getPaterno(), user.getMaterno())
                 .filter(Objects::nonNull).map(String::trim).filter(s -> !s.isEmpty())
                 .collect(Collectors.joining(" "));
-        String fechaPedido = pedido.getCreatedAt().format(FORMATO_FECHA);
-        String fechaLimite = PedidoResponse.limiteFactura(pedido).format(FORMATO_FECHA);
+        BigDecimal total = items.stream()
+                .map(i -> i.getPrecioUnitario().multiply(BigDecimal.valueOf(i.getCantidad())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        List<EmailService.LineaFactura> lineas = items.stream()
+                .map(i -> new EmailService.LineaFactura(
+                        i.getNombre(),
+                        BigDecimal.valueOf(i.getCantidad()).stripTrailingZeros().toPlainString(),
+                        moneda(i.getPrecioUnitario().multiply(BigDecimal.valueOf(i.getCantidad())))))
+                .toList();
 
-        itemsPorComercio.forEach((tradeShopId, items) -> {
-            PedidoResponse.TradeShopInfo tienda = tiendas.get(tradeShopId);
-            BigDecimal total = items.stream()
-                    .map(i -> i.getPrecioUnitario().multiply(BigDecimal.valueOf(i.getCantidad())))
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            List<EmailService.LineaFactura> lineas = items.stream()
-                    .map(i -> new EmailService.LineaFactura(
-                            i.getNombre(),
-                            BigDecimal.valueOf(i.getCantidad()).stripTrailingZeros().toPlainString(),
-                            moneda(i.getPrecioUnitario().multiply(BigDecimal.valueOf(i.getCantidad())))))
-                    .toList();
-            emailService.sendInvoiceRequestEmail(correos.get(tradeShopId),
-                    tienda != null && tienda.nombre() != null ? tienda.nombre() : "Comercio",
-                    pedido.getId(), fechaPedido, nombreCliente, user.getCorreo(), user.getTelefono(),
-                    lineas, moneda(total), fechaLimite);
-        });
+        emailService.sendInvoiceRequestEmail(correo,
+                tienda != null && tienda.nombre() != null ? tienda.nombre() : "Comercio",
+                pedido.getId(), pedido.getCreatedAt().format(FORMATO_FECHA),
+                nombreCliente, user.getCorreo(), user.getTelefono(),
+                lineas, moneda(total), PedidoResponse.limiteFactura(pedido).format(FORMATO_FECHA));
 
-        pedido.setFacturaSolicitadaAt(LocalDateTime.now());
-        pedidoRepository.save(pedido);
-        log.info("Pedido id={}: factura solicitada a {} comercio(s)", pedidoId, itemsPorComercio.size());
+        PedidoFacturaSolicitud solicitud = new PedidoFacturaSolicitud();
+        solicitud.setPedidoId(pedidoId);
+        solicitud.setTradeShopId(tradeShopId);
+        solicitud.setSolicitadaAt(LocalDateTime.now());
+        try {
+            facturaSolicitudRepository.save(solicitud);
+        } catch (DataIntegrityViolationException e) {
+            // Doble toque en paralelo: la otra solicitud ya quedó registrada.
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya solicitaste la factura a este comercio");
+        }
+        log.info("Pedido id={}: factura solicitada al comercio {}", pedidoId, tradeShopId);
 
-        return PedidoResponse.from(pedido, tiendas);
+        return PedidoResponse.from(pedido, tiendas, resolverFacturas(List.of(pedido)).getOrDefault(pedidoId, Map.of()));
+    }
+
+    // pedidoId -> (tradeShopId -> cuándo se pidió la factura), en una sola consulta.
+    private Map<Long, Map<Long, LocalDateTime>> resolverFacturas(List<Pedido> pedidos) {
+        if (pedidos.isEmpty()) {
+            return Map.of();
+        }
+        return facturaSolicitudRepository.findByPedidoIdIn(pedidos.stream().map(Pedido::getId).toList()).stream()
+                .collect(Collectors.groupingBy(PedidoFacturaSolicitud::getPedidoId,
+                        Collectors.toMap(PedidoFacturaSolicitud::getTradeShopId,
+                                PedidoFacturaSolicitud::getSolicitadaAt)));
     }
 
     private static String moneda(BigDecimal valor) {

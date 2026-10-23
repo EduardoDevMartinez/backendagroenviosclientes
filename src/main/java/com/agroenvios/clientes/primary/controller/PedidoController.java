@@ -51,11 +51,13 @@ public class PedidoController {
         return ResponseEntity.ok(pedidoService.getPedidoById(id, userDetails.getUsername()));
     }
 
-    @PostMapping("/{id}/solicitar-factura")
+    /** Pide la factura a un comercio del pedido: cada comercio factura lo suyo. */
+    @PostMapping("/{id}/comercios/{tradeShopId}/solicitar-factura")
     public ResponseEntity<PedidoResponse> solicitarFactura(
             @PathVariable Long id,
+            @PathVariable Long tradeShopId,
             @AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(pedidoService.solicitarFactura(id, userDetails.getUsername()));
+        return ResponseEntity.ok(pedidoService.solicitarFactura(id, tradeShopId, userDetails.getUsername()));
     }
 
     /**

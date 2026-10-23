@@ -26,9 +26,12 @@ public class PedidoResponse {
     private LocalDateTime createdAt;
     // Factura por correo: la app solo pinta el botón si puedeSolicitarFactura, y el límite
     // lo calcula el servidor (no el reloj del teléfono).
-    private LocalDateTime facturaSolicitadaAt;
+    // Cada comercio factura lo suyo: facturasSolicitadas dice a cuáles ya se les pidió.
     private LocalDate facturaLimite;
     private boolean puedeSolicitarFactura;
+    private List<FacturaSolicitada> facturasSolicitadas;
+
+    public record FacturaSolicitada(Long tradeShopId, LocalDateTime solicitadaAt) {}
 
     /** Último día del mes en que se hizo la compra. */
     public static LocalDate limiteFactura(Pedido pedido) {
@@ -38,7 +41,6 @@ public class PedidoResponse {
     public static boolean puedeSolicitarFactura(Pedido pedido) {
         return "APROBADO".equals(pedido.getEstado())
                 && !"CANCELLED".equals(pedido.getEstadoEntrega())
-                && pedido.getFacturaSolicitadaAt() == null
                 && !LocalDate.now().isAfter(limiteFactura(pedido));
     }
 
@@ -46,7 +48,8 @@ public class PedidoResponse {
 
     // tradeShopById: resuelto aparte (tabla tradeShop vive en la BD de proveedores)
     // para no disparar una consulta por item — ver PedidoService.
-    public static PedidoResponse from(Pedido pedido, Map<Long, TradeShopInfo> tradeShopById) {
+    public static PedidoResponse from(Pedido pedido, Map<Long, TradeShopInfo> tradeShopById,
+                                      Map<Long, LocalDateTime> facturasPorComercio) {
         PedidoResponse dto = new PedidoResponse();
         dto.setId(pedido.getId());
         dto.setEstado(pedido.getEstado());
@@ -59,7 +62,8 @@ public class PedidoResponse {
         dto.setPagoId(pedido.getPagoId());
         dto.setCodigoEntrega(pedido.getCodigoEntrega());
         dto.setCreatedAt(pedido.getCreatedAt());
-        dto.setFacturaSolicitadaAt(pedido.getFacturaSolicitadaAt());
+        dto.setFacturasSolicitadas(facturasPorComercio.entrySet().stream()
+                .map(e -> new FacturaSolicitada(e.getKey(), e.getValue())).toList());
         dto.setFacturaLimite(limiteFactura(pedido));
         dto.setPuedeSolicitarFactura(puedeSolicitarFactura(pedido));
         dto.setItems(pedido.getItems().stream()
